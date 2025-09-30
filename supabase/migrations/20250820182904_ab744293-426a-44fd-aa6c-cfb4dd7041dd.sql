@@ -1,0 +1,36 @@
+-- Complete fix for Protheus trigger and add missing columns
+
+-- Drop the entire event trigger system temporarily
+DROP EVENT TRIGGER IF EXISTS protheus_table_auto_setup;
+DROP FUNCTION IF EXISTS auto_setup_protheus_table();
+
+-- Now safely add the missing columns
+ALTER TABLE public.protheus_sa3010_fc3d70f6 
+ADD COLUMN pending_deletion BOOLEAN NOT NULL DEFAULT FALSE,
+ADD COLUMN pending_deletion_at TIMESTAMPTZ NULL;
+
+ALTER TABLE public.protheus_sa1010_80f17f00 
+ADD COLUMN pending_deletion BOOLEAN NOT NULL DEFAULT FALSE,
+ADD COLUMN pending_deletion_at TIMESTAMPTZ NULL;
+
+ALTER TABLE public.protheus_sa4010_ea26a13a
+ADD COLUMN pending_deletion BOOLEAN NOT NULL DEFAULT FALSE,
+ADD COLUMN pending_deletion_at TIMESTAMPTZ NULL;
+
+ALTER TABLE public.protheus_sa5010_7d6a8fff
+ADD COLUMN pending_deletion BOOLEAN NOT NULL DEFAULT FALSE,
+ADD COLUMN pending_deletion_at TIMESTAMPTZ NULL;
+
+-- Create indexes
+CREATE INDEX protheus_sa3010_fc3d70f6_pending_deletion_idx ON public.protheus_sa3010_fc3d70f6 (pending_deletion);
+CREATE INDEX protheus_sa1010_80f17f00_pending_deletion_idx ON public.protheus_sa1010_80f17f00 (pending_deletion);
+CREATE INDEX protheus_sa4010_ea26a13a_pending_deletion_idx ON public.protheus_sa4010_ea26a13a (pending_deletion);
+CREATE INDEX protheus_sa5010_7d6a8fff_pending_deletion_idx ON public.protheus_sa5010_7d6a8fff (pending_deletion);
+
+-- Backfill deletion data for SA3010 (marks deleted record 000006)
+UPDATE public.protheus_sa3010_fc3d70f6
+SET pending_deletion = TRUE, 
+    pending_deletion_at = psd.created_at
+FROM public.protheus_sync_deletions psd
+WHERE psd.supabase_table_name = 'protheus_sa3010_fc3d70f6'
+AND protheus_sa3010_fc3d70f6.protheus_id = psd.protheus_id;

@@ -1,0 +1,990 @@
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/inter/700.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* FichaCerta - Design System for Aksell Nutrition
+Professional nutrition and health-focused color palette with modern gradients
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Base colors - clean and professional */
+    --background: 0 0% 100%;
+    --foreground: 210 24% 16%;
+
+    /* Card system */
+    --card: 0 0% 100%;
+    --card-foreground: 210 24% 16%;
+
+    /* Popover system */
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 24% 16%;
+
+    /* Primary - Aksell orange #FF6547 */
+    --primary: 14 100% 64%;
+    --primary-foreground: 0 0% 100%;
+    --primary-light: 14 100% 70%;
+    --primary-dark: 14 100% 55%;
+
+    /* Secondary - Complementary blue for trust/security */
+    --secondary: 213 100% 96%;
+    --secondary-foreground: 213 94% 22%;
+
+    /* Muted tones */
+    --muted: 210 40% 96%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    /* Accent - Complementary color to Aksell orange */
+    --accent: 14 100% 70%;
+    --accent-foreground: 0 0% 100%;
+    --accent-light: 14 100% 75%;
+
+    /* Status colors */
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --warning: 48 96% 53%;
+    --warning-foreground: 0 0% 100%;
+
+    /* Border and input */
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 14 100% 64%;
+
+    /* Professional gradients for FichaCerta */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-light)) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(var(--primary-dark)) 0%, hsl(var(--primary)) 50%, hsl(var(--accent)) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(var(--background)) 0%, hsl(var(--muted) / 0.3) 100%);
+    --gradient-subtle: linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--muted) / 0.1) 100%);
+    --gradient-security: linear-gradient(90deg, hsl(var(--primary)) 0%, hsl(213 94% 22%) 100%);
+
+    --shadow-elegant: 0 8px 32px -8px hsl(var(--primary) / 0.2);
+    --shadow-primary: 0 10px 40px -12px hsl(var(--primary) / 0.25);
+    --shadow-card: 0 4px 24px -6px hsl(210 24% 16% / 0.1);
+    --shadow-glow: 0 0 40px hsl(var(--primary) / 0.15);
+
+    /* Animation properties */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+    --radius: 0.5rem;
+
+    /* Sidebar - Aksell branded */
+    --sidebar-background: 0 0% 99%;
+    --sidebar-foreground: 210 24% 16%;
+    --sidebar-primary: 14 100% 64%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 14 20% 96%;
+    --sidebar-accent-foreground: 210 24% 16%;
+    --sidebar-border: 14 20% 90%;
+    --sidebar-ring: 14 100% 64%;
+    /* Hero left background token (matches aksell.com.br) */
+    --hero-left: 18 100% 96%;
+    /* Brand brown for site headlines (marrom escuro) */
+    --brand-brown: 18 35% 24%;
+    /* Brand wine for deep sections (vinho) */
+    --brand-wine: 352 50% 16%;
+    /* Hero texture pan duration */
+    --hero-texture-pan-duration: 180s;
+
+    /* Premium Dark Mode Color Palette */
+    --aksell-coral: 14 75% 58%;
+    --aksell-amber: 18 75% 48%;
+    --aksell-rust: 14 70% 35%;
+    --aksell-wine: 352 40% 35%;
+    --aksell-cream: 18 15% 15%;
+    --aksell-sage: 120 10% 35%;
+    --aksell-slate: 210 20% 25%;
+    --aksell-pearl: 210 15% 12%;
+
+    /* Premium Dark Mode Gradients */
+    --gradient-hero-premium: conic-gradient(from 45deg at 30% 70%, hsl(14 80% 54%) 0%, hsl(18 75% 48%) 25%, hsl(14 85% 60%) 50%, hsl(352 40% 35%) 75%, hsl(14 80% 54%) 100%);
+    --gradient-section-warm: linear-gradient(135deg, hsl(14 80% 54% / 0.08) 0%, hsl(18 75% 48% / 0.12) 35%, hsl(352 40% 35% / 0.08) 70%, transparent 100%);
+    --gradient-product-premium: radial-gradient(ellipse at top right, hsl(14 80% 54% / 0.12) 0%, hsl(18 75% 48% / 0.08) 40%, transparent 70%);
+    --gradient-warm-depth: linear-gradient(145deg, hsl(14 80% 54%) 0%, hsl(18 75% 48%) 35%, hsl(14 70% 35%) 70%, hsl(352 40% 35%) 100%);
+    --gradient-cool-complement: linear-gradient(135deg, hsl(120 10% 35% / 0.15) 0%, hsl(210 20% 25% / 0.12) 50%, transparent 100%);
+    --gradient-radial-glow: radial-gradient(circle at center, hsl(14 80% 54% / 0.2) 0%, hsl(18 75% 48% / 0.12) 40%, transparent 70%);
+
+    /* Premium Dark Mode Overlays */
+    --overlay-image-warm: linear-gradient(135deg, hsl(14 80% 54% / 0.2) 0%, hsl(18 25% 14% / 0.4) 100%);
+    --overlay-glass: linear-gradient(135deg, hsl(0 0% 100% / 0.05) 0%, hsl(0 0% 100% / 0.02) 100%);
+    --overlay-product: radial-gradient(circle at center, transparent 0%, hsl(14 80% 54% / 0.05) 70%);
+    --overlay-section: linear-gradient(180deg, hsl(14 80% 54% / 0.03) 0%, transparent 50%, hsl(18 75% 48% / 0.03) 100%);
+    --overlay-hero-depth: linear-gradient(135deg, hsl(14 80% 54% / 0.15) 0%, hsl(352 40% 35% / 0.25) 100%);
+
+    /* Premium Dark Mode Shadows */
+    --shadow-warm-glow: 0 0 60px -15px hsl(14 80% 54% / 0.4);
+    --shadow-depth: 0 20px 60px -20px hsl(14 80% 54% / 0.3), 0 0 0 1px hsl(14 80% 54% / 0.15);
+    --shadow-glass: 0 8px 32px -8px hsl(0 0% 0% / 0.3), 0 0 0 1px hsl(0 0% 100% / 0.05);
+
+    /* Expanded Aksell Color Palette - corrected duplicates */
+    --aksell-coral: 14 85% 68%;
+    --aksell-amber: 18 85% 58%;
+    --aksell-rust: 14 80% 45%;
+    --aksell-wine: 352 50% 45%;
+    --aksell-cream: 18 25% 95%;
+    --aksell-sage: 120 15% 65%;
+    --aksell-slate: 210 15% 45%;
+    --aksell-pearl: 210 10% 92%;
+
+    /* Sophisticated Multi-Point Gradients */
+    --gradient-hero-premium: conic-gradient(from 45deg at 30% 70%, hsl(14 100% 64%) 0%, hsl(18 85% 58%) 25%, hsl(14 100% 70%) 50%, hsl(352 50% 45%) 75%, hsl(14 100% 64%) 100%);
+    --gradient-section-warm: linear-gradient(135deg, hsl(14 100% 64% / 0.05) 0%, hsl(18 85% 58% / 0.08) 35%, hsl(352 50% 45% / 0.06) 70%, transparent 100%);
+    --gradient-product-premium: radial-gradient(ellipse at top right, hsl(14 100% 64% / 0.08) 0%, hsl(18 85% 58% / 0.05) 40%, transparent 70%);
+    --gradient-warm-depth: linear-gradient(145deg, hsl(14 100% 64%) 0%, hsl(18 85% 58%) 35%, hsl(14 80% 45%) 70%, hsl(352 50% 45%) 100%);
+    --gradient-cool-complement: linear-gradient(135deg, hsl(120 15% 65% / 0.1) 0%, hsl(210 15% 45% / 0.08) 50%, transparent 100%);
+    --gradient-radial-glow: radial-gradient(circle at center, hsl(14 100% 64% / 0.15) 0%, hsl(18 85% 58% / 0.08) 40%, transparent 70%);
+
+    /* Sophisticated Translucent Overlays */
+    --overlay-image-warm: linear-gradient(135deg, hsl(14 100% 64% / 0.15) 0%, hsl(18 35% 24% / 0.25) 100%);
+    --overlay-glass: linear-gradient(135deg, hsl(0 0% 100% / 0.1) 0%, hsl(0 0% 100% / 0.05) 100%);
+    --overlay-product: radial-gradient(circle at center, transparent 0%, hsl(14 100% 64% / 0.03) 70%);
+    --overlay-section: linear-gradient(180deg, hsl(14 100% 64% / 0.02) 0%, transparent 50%, hsl(18 85% 58% / 0.02) 100%);
+    --overlay-hero-depth: linear-gradient(135deg, hsl(14 100% 64% / 0.12) 0%, hsl(352 50% 45% / 0.18) 100%);
+
+    /* Enhanced shadows with depth */
+    --shadow-warm-glow: 0 0 60px -15px hsl(14 100% 64% / 0.3);
+    --shadow-depth: 0 20px 60px -20px hsl(14 100% 64% / 0.2), 0 0 0 1px hsl(14 100% 64% / 0.1);
+    --shadow-glass: 0 8px 32px -8px hsl(0 0% 0% / 0.1), 0 0 0 1px hsl(0 0% 100% / 0.1);
+
+    /* Sophisticated Transitions */
+    --transition-elastic: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    --transition-premium: color 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1), backdrop-filter 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* Typography Scale */
+    --text-hero: clamp(2.5rem, 5vw, 4rem);
+    --text-h1: clamp(2rem, 4vw, 3.5rem);
+    --text-h2: clamp(1.5rem, 3vw, 2.5rem);
+    --text-h3: clamp(1.25rem, 2.5vw, 2rem);
+    --text-body-lg: clamp(1.125rem, 2vw, 1.25rem);
+    --text-body: clamp(1rem, 1.5vw, 1.125rem);
+    --text-caption: clamp(0.875rem, 1.2vw, 1rem);
+
+    /* Line Heights */
+    --leading-hero: 1.1;
+    --leading-heading: 1.2;
+    --leading-body: 1.6;
+    --leading-relaxed: 1.7;
+
+    /* Letter Spacing */
+    --tracking-hero: -0.02em;
+    --tracking-heading: -0.01em;
+    --tracking-body: 0;
+    --tracking-wide: 0.025em;
+  }
+
+  .dark {
+    /* Dark mode - professional dark theme */
+    --background: 210 24% 8%;
+    --foreground: 0 0% 95%;
+
+    /* Card system - dark */
+    --card: 210 24% 10%;
+    --card-foreground: 0 0% 95%;
+
+    /* Popover system - dark */
+    --popover: 210 24% 10%;
+    --popover-foreground: 0 0% 95%;
+
+    /* Primary - Aksell orange for dark mode */
+    --primary: 14 100% 64%;
+    --primary-foreground: 210 24% 8%;
+    --primary-light: 14 100% 70%;
+    --primary-dark: 14 100% 58%;
+
+    /* Secondary - adjusted for dark mode */
+    --secondary: 213 32% 18%;
+    --secondary-foreground: 213 94% 85%;
+
+    /* Muted tones - dark */
+    --muted: 210 24% 16%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    /* Accent - Aksell orange variant for dark mode */
+    --accent: 14 100% 70%;
+    --accent-foreground: 210 24% 8%;
+    --accent-light: 14 100% 75%;
+
+    /* Status colors - adjusted for dark mode */
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 142 70% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 48 96% 60%;
+    --warning-foreground: 210 24% 8%;
+
+    /* Border and input - dark */
+    --border: 210 24% 20%;
+    --input: 210 24% 20%;
+    --ring: 14 100% 64%;
+
+    /* Dark mode gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary-dark)) 0%, hsl(var(--primary)) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-light)) 50%, hsl(var(--accent)) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(var(--card)) 0%, hsl(var(--muted) / 0.5) 100%);
+    --gradient-subtle: linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--muted) / 0.1) 100%);
+    --gradient-security: linear-gradient(90deg, hsl(var(--primary)) 0%, hsl(213 70% 35%) 100%);
+
+    /* Dark mode shadows */
+    --shadow-primary: 0 10px 40px -12px hsl(var(--primary) / 0.4);
+    --shadow-card: 0 4px 24px -6px hsl(0 0% 0% / 0.3);
+    --shadow-glow: 0 0 40px hsl(var(--primary) / 0.25);
+    /* Dark sidebar - Aksell branded */
+    --sidebar-background: 210 24% 8%;
+    --sidebar-foreground: 0 0% 95%;
+    --sidebar-primary: 14 100% 64%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 24% 16%;
+    --sidebar-accent-foreground: 0 0% 95%;
+    --sidebar-border: 210 24% 20%;
+    --sidebar-ring: 14 100% 64%;
+    /* Dark mode variant for hero left background */
+    --hero-left: 18 35% 18%;
+    /* Brand brown for site headlines (marrom escuro) */
+    --brand-brown: 18 35% 75%;
+  /* Brand wine for deep sections (vinho) */
+  --brand-wine: 352 45% 18%;
+
+  /* Product card gradients */
+  --gradient-product-card: linear-gradient(145deg, hsl(var(--card)) 0%, hsl(var(--card) / 0.8) 100%);
+  --gradient-product-hover: linear-gradient(145deg, hsl(var(--primary) / 0.02) 0%, hsl(var(--accent) / 0.02) 100%);
+}
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-muted/20;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/30 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/50;
+  }
+}
+html { scroll-padding-top: calc(64px + env(safe-area-inset-top, 0px)); }
+
+@layer components {
+  /* FichaCerta specific component classes */
+  .logo-animation {
+    @apply transition-all duration-500 ease-in-out;
+  }
+  
+  .lock-opening {
+    animation: lockOpen 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+  }
+  
+  .lock-closing {
+    animation: lockClose 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+  }
+  
+  .paper-secure {
+    animation: paperSecure 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+  
+  .paper-release {
+    animation: paperRelease 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+
+  /* Gradient backgrounds */
+  .bg-gradient-primary {
+    background: var(--gradient-primary);
+  }
+  
+  .bg-gradient-hero {
+    background: var(--gradient-hero);
+  }
+  
+  .bg-gradient-card {
+    background: var(--gradient-card);
+  }
+  
+  .bg-gradient-security {
+    background: var(--gradient-security);
+  }
+
+  /* Professional shadows - moved to utilities layer */
+
+  /* Smooth transitions */
+  .transition-smooth {
+    transition: var(--transition-smooth);
+  }
+  
+  .transition-bounce {
+    transition: var(--transition-bounce);
+  }
+}
+
+/* Component-specific styles and animations */
+.logo-animation {
+  animation: logoFloat 3s ease-in-out infinite;
+}
+
+.lock-opening {
+  animation: lockOpen 0.6s ease-out forwards;
+}
+
+.lock-closing {
+  animation: lockClose 0.6s ease-out forwards;
+}
+
+.paper-secure {
+  animation: paperSecure 0.8s ease-out forwards;
+}
+
+.paper-release {
+  animation: paperRelease 0.8s ease-out forwards;
+}
+
+/* Aksell brand animations */
+.hover-lift {
+  @apply transition-all duration-300 hover:scale-[1.02] hover:shadow-lg;
+}
+
+.hover-glow {
+  @apply transition-all duration-300 hover:shadow-glow;
+}
+
+.button-press {
+  @apply transition-all duration-150 active:scale-[0.98];
+}
+
+.card-interactive {
+  @apply transition-all duration-300 hover:scale-[1.01] hover:shadow-elegant cursor-pointer;
+}
+
+
+.pulse-primary {
+  @apply animate-pulse;
+  animation: pulsePrimary 2s infinite;
+}
+
+/* Gradient backgrounds */
+.bg-gradient-primary {
+  background: var(--gradient-primary);
+}
+
+.bg-gradient-subtle {
+  background: var(--gradient-subtle);
+}
+
+.bg-gradient-card {
+  background: var(--gradient-card);
+}
+
+.bg-gradient-security {
+  background: var(--gradient-security);
+}
+
+
+/* Transition utilities */
+.transition-smooth {
+  transition: var(--transition-smooth);
+}
+
+.transition-bounce {
+  transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+@layer utilities {
+  /* Shadow utilities - moved here for hover modifier support */
+  .shadow-primary {
+    box-shadow: var(--shadow-primary);
+  }
+  
+  .shadow-card {
+    box-shadow: var(--shadow-card);
+  }
+  
+  .shadow-glow {
+    box-shadow: var(--shadow-glow);
+  }
+  
+  .shadow-elegant {
+    box-shadow: var(--shadow-elegant);
+  }
+
+  /* Hero left column background token utility */
+  .bg-hero-left {
+    background-color: hsl(var(--hero-left));
+  }
+
+  /* Missing gradient classes */
+  .bg-gradient-wine-premium {
+    background: linear-gradient(135deg, hsl(var(--aksell-wine)) 0%, hsl(var(--aksell-rust)) 100%);
+  }
+
+  .bg-gradient-coral-premium {
+    background: linear-gradient(135deg, hsl(var(--aksell-coral)) 0%, hsl(var(--aksell-amber)) 100%);
+  }
+
+  .bg-gradient-section-warm {
+    background: var(--gradient-section-warm);
+  }
+
+  .bg-gradient-product-premium {
+    background: var(--gradient-product-premium);
+  }
+
+  .bg-gradient-radial-glow {
+    background: var(--gradient-radial-glow);
+  }
+
+  /* Text hover effects */
+  .text-hover-lift {
+    @apply transition-all duration-300 hover:scale-[1.02];
+  }
+
+  /* Overlay utilities */
+  .bg-overlay-section {
+    background: var(--overlay-section);
+  }
+
+  .bg-overlay-hero-depth {
+    background: var(--overlay-hero-depth);
+  }
+
+  .bg-overlay-glass {
+    background: var(--overlay-glass);
+  }
+
+  .bg-overlay-image-warm {
+    background: var(--overlay-image-warm);
+  }
+
+  /* Shadow utilities for warm effects */
+  .shadow-warm-glow {
+    box-shadow: var(--shadow-warm-glow);
+  }
+
+  .shadow-glass {
+    box-shadow: var(--shadow-glass);
+  }
+
+  .shadow-depth {
+    box-shadow: var(--shadow-depth);
+  }
+
+  /* Hero texture background - matches aksell.com.br top texture */
+  .hero-texture {
+    background-image: url('/lovable-uploads/grafismo-fino-1.svg');
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-position: center;
+  }
+
+  /* Mobile-specific utilities */
+  .mobile-safe-padding {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .mobile-touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Mobile-optimized text sizes */
+  .mobile-text-base {
+    @apply text-sm md:text-base;
+  }
+
+  .mobile-text-lg {
+    @apply text-base md:text-lg;
+  }
+
+  .mobile-text-xl {
+    @apply text-lg md:text-xl;
+  }
+
+  /* Mobile-optimized spacing */
+  .mobile-spacing {
+    @apply space-y-3 md:space-y-4 lg:space-y-6;
+  }
+
+  .mobile-gap {
+    @apply gap-3 md:gap-4 lg:gap-6;
+  }
+
+  /* Premium Typography Classes */
+  .text-hero {
+    font-size: var(--text-hero);
+    line-height: var(--leading-hero);
+    letter-spacing: var(--tracking-hero);
+    font-weight: 700;
+    @apply font-oswald;
+  }
+
+  .text-h1-premium {
+    font-size: var(--text-h1);
+    line-height: var(--leading-heading);
+    letter-spacing: var(--tracking-heading);
+    font-weight: 600;
+    @apply font-oswald;
+  }
+
+  .text-h2-premium {
+    font-size: var(--text-h2);
+    line-height: var(--leading-heading);
+    letter-spacing: var(--tracking-heading);
+    font-weight: 600;
+    @apply font-oswald;
+  }
+
+  .text-h3-premium {
+    font-size: var(--text-h3);
+    line-height: var(--leading-heading);
+    letter-spacing: var(--tracking-heading);
+    font-weight: 500;
+    @apply font-oswald;
+  }
+
+  .text-body-premium {
+    font-size: var(--text-body);
+    line-height: var(--leading-body);
+    letter-spacing: var(--tracking-body);
+    font-weight: 400;
+    @apply font-inter;
+  }
+
+  .text-body-lg-premium {
+    font-size: var(--text-body-lg);
+    line-height: var(--leading-relaxed);
+    letter-spacing: var(--tracking-body);
+    font-weight: 400;
+    @apply font-inter;
+  }
+
+  .text-caption-premium {
+    font-size: var(--text-caption);
+    line-height: var(--leading-body);
+    letter-spacing: var(--tracking-wide);
+    font-weight: 500;
+    @apply font-inter;
+  }
+
+  /* Sophisticated Color System Utilities */
+  .bg-gradient-hero-premium {
+    background: var(--gradient-hero-premium);
+  }
+  .bg-gradient-section-warm {
+    background: var(--gradient-section-warm);
+  }
+  .bg-gradient-product-premium {
+    background: var(--gradient-product-premium);
+  }
+  .bg-gradient-warm-depth {
+    background: var(--gradient-warm-depth);
+  }
+  .bg-gradient-radial-glow {
+    background: var(--gradient-radial-glow);
+  }
+  .bg-gradient-cool-complement {
+    background: var(--gradient-cool-complement);
+  }
+
+  /* Sophisticated Overlay Utilities */
+  .overlay-image-warm {
+    position: relative;
+  }
+  .overlay-image-warm::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--overlay-image-warm);
+    z-index: 1;
+  }
+  .overlay-glass {
+    position: relative;
+  }
+  .overlay-glass::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--overlay-glass);
+    backdrop-filter: blur(10px);
+    z-index: 1;
+  }
+  .overlay-product::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--overlay-product);
+    z-index: 1;
+  }
+
+  /* Sophisticated Hover States */
+  .hover-warm {
+    transition: var(--transition-premium);
+  }
+  .hover-warm:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-warm-glow);
+    background: linear-gradient(135deg, hsl(14 25% 64% / 0.1) 0%, hsl(18 20% 58% / 0.08) 100%);
+  }
+
+  .hover-glass {
+    transition: var(--transition-premium);
+    position: relative;
+    overflow: hidden;
+  }
+  .hover-glass::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, 
+      hsla(var(--background), 0.02) 0%, 
+      hsla(var(--primary), 0.01) 50%, 
+      hsla(var(--background), 0.02) 100%);
+    backdrop-filter: blur(0px);
+    opacity: 0;
+    transition: var(--transition-premium);
+    z-index: 0;
+    pointer-events: none;
+  }
+  .hover-glass:hover::before {
+    backdrop-filter: blur(1px);
+    opacity: 0.2;
+  }
+
+  .hover-depth {
+    transition: var(--transition-premium);
+  }
+  .hover-depth:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: var(--shadow-depth);
+  }
+
+  .active-press:active {
+    transform: translateY(1px) scale(0.98);
+    transition: var(--transition-micro);
+  }
+
+  .focus-ring-premium:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px hsl(14 100% 64% / 0.3);
+  }
+
+  /* Typography Micro-Interactions */
+  .text-hover-lift {
+    @apply transition-all duration-300 ease-out;
+    opacity: 1 !important;
+    position: relative;
+    z-index: 10;
+    pointer-events: auto;
+  }
+
+  .text-hover-lift:hover {
+    letter-spacing: 0.02em;
+    transform: translateY(-1px);
+    opacity: 1 !important;
+  }
+
+  /* Ensure all text elements are always visible and clickable */
+  .hover-glass h1, .hover-glass h2, .hover-glass h3, .hover-glass h4, .hover-glass h5, .hover-glass h6,
+  .hover-glass p, .hover-glass a, .hover-glass button, .hover-glass span {
+    position: relative !important;
+    z-index: 10 !important;
+    pointer-events: auto !important;
+    opacity: 1 !important;
+  }
+
+  .text-stagger-fade > * {
+    @apply opacity-0 translate-y-2;
+    animation: stagger-fade-in 0.6s ease-out forwards;
+  }
+
+  .text-stagger-fade > *:nth-child(1) { animation-delay: 0ms; }
+  .text-stagger-fade > *:nth-child(2) { animation-delay: 100ms; }
+  .text-stagger-fade > *:nth-child(3) { animation-delay: 200ms; }
+  .text-stagger-fade > *:nth-child(4) { animation-delay: 300ms; }
+  .text-stagger-fade > *:nth-child(5) { animation-delay: 400ms; }
+
+  /* Custom keyframes for FichaCerta animations */
+  @keyframes logoFloat {
+    0%, 100% { transform: translateY(0px); }
+  }
+
+  @keyframes lockOpen {
+    0% { 
+      transform: rotate(0deg) scale(1); 
+      filter: hue-rotate(0deg);
+    }
+    50% { 
+      transform: rotate(-15deg) scale(1.1); 
+      filter: hue-rotate(60deg);
+    }
+    100% { 
+      transform: rotate(-45deg) scale(1.05); 
+      filter: hue-rotate(120deg);
+    }
+  }
+  
+  @keyframes lockClose {
+    0% { 
+      transform: rotate(-45deg) scale(1.05); 
+      filter: hue-rotate(120deg);
+    }
+    50% { 
+      transform: rotate(-15deg) scale(1.1); 
+      filter: hue-rotate(60deg);
+    }
+    100% { 
+      transform: rotate(0deg) scale(1); 
+      filter: hue-rotate(0deg);
+    }
+  }
+  
+  @keyframes paperSecure {
+    0% { 
+      transform: translateY(0px) rotate(0deg); 
+      opacity: 0.7;
+    }
+    50% { 
+      transform: translateY(-10px) rotate(2deg); 
+      opacity: 0.9;
+    }
+    100% { 
+      transform: translateY(-8px) rotate(1deg); 
+      opacity: 1;
+    }
+  }
+  
+  @keyframes paperRelease {
+    0% { 
+      transform: translateY(-8px) rotate(1deg); 
+      opacity: 1;
+    }
+    50% { 
+      transform: translateY(5px) rotate(-1deg); 
+      opacity: 0.8;
+    }
+    100% { 
+      transform: translateY(0px) rotate(0deg); 
+      opacity: 0.9;
+    }
+  }
+
+  @keyframes slide-in-left {
+    0% { transform: translateX(-24px); opacity: 0; }
+    100% { transform: translateX(0); opacity: 1; }
+  }
+
+  @keyframes pulsePrimary {
+    0%, 100% {
+      box-shadow: 0 0 0 0 hsl(var(--primary) / 0.4);
+      transform: scale(1);
+    }
+    50% { 
+      box-shadow: 0 0 0 10px hsl(var(--primary) / 0);
+      transform: scale(1.02);
+    }
+  }
+
+  /* Hero texture slow pan (only when visible) */
+  @keyframes heroTexturePanX {
+    from { background-position: 100% center; }
+    to { background-position: 0% center; }
+  }
+
+  /* Applies slow horizontal pan to the hero background texture */
+  .hero-texture-pan {
+    background-size: cover; /* restore original cover to keep height */
+    animation: heroTexturePanX var(--hero-texture-pan-duration, 180s) linear infinite alternate;
+    will-change: background-position;
+  }
+
+  /* Accessibility: respect users who prefer reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    .hero-texture-pan { animation: none; }
+    .animate-fade-in { animation: none; opacity: 1; transform: none; }
+    .animate-fade-up { animation: none; opacity: 1; transform: none; }
+  }
+
+  /* Product card specific styles */
+  .product-card-enter {
+    animation: productCardSlideIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+
+  @keyframes productCardSlideIn {
+    0% { 
+      opacity: 0; 
+      transform: translateY(30px) scale(0.95); 
+    }
+    100% { 
+      opacity: 1; 
+      transform: translateY(0) scale(1); 
+    }
+  }
+
+  /* Staggered animations for product grid */
+  .stagger-0 { animation-delay: 0ms; }
+  .stagger-1 { animation-delay: 100ms; }
+  .stagger-2 { animation-delay: 200ms; }
+  .stagger-3 { animation-delay: 300ms; }
+  .stagger-4 { animation-delay: 400ms; }
+  .stagger-5 { animation-delay: 500ms; }
+
+  /* Setas animadas para banner de contato */
+  @keyframes arrowNudge {
+    0%, 100% { transform: translateX(0); opacity: 0.9; }
+    50% { transform: translateX(4px); opacity: 1; }
+  }
+  .arrow-nudge {
+    animation: arrowNudge 1.2s ease-in-out infinite;
+  }
+
+  /* React Big Calendar Styles */
+  .rbc-calendar {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+
+  .rbc-header {
+    background-color: hsl(var(--muted));
+    color: hsl(var(--muted-foreground));
+    border-bottom: 1px solid hsl(var(--border));
+    padding: 8px;
+    font-weight: 500;
+  }
+
+  .rbc-month-view {
+    border: 1px solid hsl(var(--border));
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .rbc-date-cell {
+    padding: 4px;
+    border-right: 1px solid hsl(var(--border));
+  }
+
+  .rbc-day-bg {
+    border-bottom: 1px solid hsl(var(--border));
+  }
+
+  .rbc-today {
+    background-color: hsl(var(--accent));
+  }
+
+  .rbc-off-range-bg {
+    background-color: hsl(var(--muted));
+  }
+
+  .rbc-event {
+    border-radius: 4px;
+    font-size: 12px;
+    padding: 2px 4px;
+    margin: 1px;
+  }
+
+  .rbc-toolbar {
+    margin-bottom: 16px;
+    padding: 0 16px;
+  }
+
+  .rbc-toolbar button {
+    background-color: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    border: none;
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin: 0 2px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+
+  .rbc-toolbar button:hover {
+    background-color: hsl(var(--primary)) / 0.9;
+  }
+
+  .rbc-toolbar button:disabled {
+    background-color: hsl(var(--muted));
+    color: hsl(var(--muted-foreground));
+    cursor: not-allowed;
+  }
+
+  .rbc-toolbar-label {
+    font-size: 18px;
+    font-weight: 600;
+    color: hsl(var(--foreground));
+  }
+}
+
+@layer utilities {
+  @keyframes heroZoomOut {
+    0% { transform: scale(1.08); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  .animate-hero-zoom-out {
+    animation: heroZoomOut 0.8s ease-out both;
+  }
+}
+
+
+
+/* Global fallback for any CK instances */
+.ck.ck-editor .ck-content { background: hsl(var(--card)); color: hsl(var(--foreground)); }
+.ck.ck-reset_all { z-index: 60; }
+
+@keyframes stagger-fade-in {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Kanban Drag & Drop Styles */
+body.dragging {
+  cursor: grabbing !important;
+}
+
+body.dragging .animate-fade-in {
+  animation: none !important;
+}
+
+/* Removed .dnd-overlay-portal to prevent transform interference */
+
+/* Overscroll behavior para colunas */
+.overscroll-contain {
+  overscroll-behavior: contain;
+}
+
+.drag-handle {
+  touch-action: none;
+}
+
+/* No animations class to prevent flickering */
+.no-animations,
+.no-animations * {
+  animation: none !important;
+  transition: none !important;
+  animation-duration: 0s !important;
+  transition-duration: 0s !important;
+}

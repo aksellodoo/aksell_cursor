@@ -1,0 +1,15 @@
+<svg viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .logo-primary { fill: #fc5d33; }
+  </style>
+  <g id="logoMark">
+    <path class="logo-primary" d="M20 10h8l8 20-8 20h-8l-8-20z"/>
+  </g>
+  <g id="wordmark">
+    <path class="logo-primary" d="M50 15h-4l-8 30h4l1.5-6h9l1.5 6h4zm-6 20l3-12 3 12h-6z"/>
+    <path class="logo-primary" d="M65 45V15h4v12h8V15h4v30h-4V31h-8v14z"/>
+    <path class="logo-primary" d="M90 31.5V45h-4V31.5c0-5.25 3.75-9 9-9s9 3.75 9 9c0 2.25-.75 4.5-2.25 6l-6 7.5h-4.5l6-7.5c.75-.75 1.25-1.75 1.25-3 0-2.25-1.75-4-4-4s-4 1.75-4 4z"/>
+    <path class="logo-primary" d="M110 45V15h4v26h10v4z"/>
+    <path class="logo-primary" d="M130 45V15h4v26h10v4z"/>
+  </g>
+</svg>

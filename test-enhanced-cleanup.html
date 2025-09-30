@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧹 Teste de Limpeza Aprimorada - Aksell Nutrition</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f8fafc;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        h1 { color: #1e40af; margin-bottom: 30px; }
+        .button-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary { background: #3b82f6; color: white; }
+        .btn-success { background: #10b981; color: white; }
+        .btn-warning { background: #f59e0b; color: white; }
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-info { background: #06b6d4; color: white; }
+        button:hover { transform: translateY(-2px); }
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
+        .output {
+            background: #f1f5f9;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            min-height: 100px;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            border-left: 4px solid #3b82f6;
+        }
+        .status {
+            padding: 8px 16px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-weight: 600;
+        }
+        .status.success { background: #dcfce7; color: #166534; }
+        .status.error { background: #fef2f2; color: #dc2626; }
+        .status.info { background: #dbeafe; color: #1d4ed8; }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .metric {
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #e2e8f0;
+        }
+        .metric-value { font-size: 24px; font-weight: 700; color: #1e40af; }
+        .metric-label { font-size: 12px; color: #64748b; margin-top: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧹 Teste de Limpeza Aprimorada - Documentos Travados</h1>
+        
+        <div class="status info">
+            <strong>🔧 Novo Sistema Implementado:</strong> Limpeza inteligente que aprova documentos com embeddings verbatim e rejeita documentos sem chunks
+        </div>
+
+        <div class="metrics" id="metrics">
+            <div class="metric">
+                <div class="metric-value" id="totalDocs">-</div>
+                <div class="metric-label">Total Documentos</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value" id="processingDocs">-</div>
+                <div class="metric-label">Em Processamento</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value" id="approvedDocs">-</div>
+                <div class="metric-label">Aprovados</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value" id="rejectedDocs">-</div>
+                <div class="metric-label">Rejeitados</div>
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button class="btn-info" onclick="checkDocuments()">📊 Verificar Status</button>
+            <button class="btn-warning" onclick="findStuckDocuments()">🔍 Encontrar Travados</button>
+            <button class="btn-success" onclick="runEnhancedCleanup()">🧹 Limpeza Aprimorada</button>
+            <button class="btn-primary" onclick="runOriginalCleanup()">🔧 Limpeza Original</button>
+            <button class="btn-danger" onclick="runReprocessDocument()">🔄 Reprocessar Documento</button>
+        </div>
+
+        <div class="output" id="output">Aguardando ação...</div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://nahyrexnxhzutfeqxjte.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5haHlyZXhueGh6dXRmZXF4anRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU4MDAwMjksImV4cCI6MjA3MTM3NjAyOX0.PoT9gaGRaS6XEvUxlakJA9LIZ66aVSjNFEOFfR0qOsg';
+        
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        function log(message, type = 'info') {
+            const output = document.getElementById('output');
+            const timestamp = new Date().toLocaleTimeString();
+            output.textContent += `[${timestamp}] ${message}\n`;
+            output.scrollTop = output.scrollHeight;
+            console.log(message);
+        }
+
+        function showLoading(button) {
+            button.disabled = true;
+            button.innerHTML = '<div class="loading"></div>' + button.textContent;
+        }
+
+        function hideLoading(button, originalText) {
+            button.disabled = false;
+            button.innerHTML = originalText;
+        }
+
+        async function checkDocuments() {
+            const button = event.target;
+            const originalText = button.textContent;
+            showLoading(button);
+            
+            try {
+                log('📊 Verificando status de todos os documentos...');
+                
+                const { data, error } = await supabase
+                    .from('documents')
+                    .select('id, name, status, created_at, updated_at, chunk_count')
+                    .order('updated_at', { ascending: false })
+                    .limit(50);
+
+                if (error) {
+                    throw error;
+                }
+
+                const statusCounts = data.reduce((acc, doc) => {
+                    acc[doc.status] = (acc[doc.status] || 0) + 1;
+                    return acc;
+                }, {});
+
+                document.getElementById('totalDocs').textContent = data.length;
+                document.getElementById('processingDocs').textContent = statusCounts['Processando'] || 0;
+                document.getElementById('approvedDocs').textContent = statusCounts['Aprovado'] || 0;
+                document.getElementById('rejectedDocs').textContent = statusCounts['Rejeitado'] || 0;
+
+                log(`✅ Status encontrados: ${JSON.stringify(statusCounts, null, 2)}`);
+                
+                const stuckDocs = data.filter(doc => 
+                    doc.status === 'Processando' && 
+                    new Date() - new Date(doc.updated_at) > 5 * 60 * 1000
+                );
+                
+                if (stuckDocs.length > 0) {
+                    log(`⚠️ ${stuckDocs.length} documentos potencialmente travados:`);
+                    stuckDocs.forEach(doc => {
+                        const minutesStuck = Math.round((new Date() - new Date(doc.updated_at)) / 60000);
+                        log(`   - ${doc.name} (travado há ${minutesStuck} min)`);
+                    });
+                } else {
+                    log('✅ Nenhum documento travado encontrado');
+                }
+
+            } catch (error) {
+                log(`❌ Erro: ${error.message}`, 'error');
+            } finally {
+                hideLoading(button, originalText);
+            }
+        }
+
+        async function findStuckDocuments() {
+            const button = event.target;
+            const originalText = button.textContent;
+            showLoading(button);
+            
+            try {
+                log('🔍 Procurando documentos travados há mais de 5 minutos...');
+                
+                const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+                
+                const { data, error } = await supabase
+                    .from('documents')
+                    .select('id, name, status, created_at, updated_at, chunk_count')
+                    .eq('status', 'Processando')
+                    .lt('updated_at', fiveMinutesAgo)
+                    .order('updated_at', { ascending: true });
+
+                if (error) {
+                    throw error;
+                }
+
+                log(`📋 Encontrados ${data.length} documentos travados:`);
+                
+                for (const doc of data) {
+                    const minutesStuck = Math.round((new Date() - new Date(doc.updated_at)) / 60000);
+                    
+                    // Check for verbatim chunks
+                    const { data: chunks, error: chunkError } = await supabase
+                        .from('doc_chunks')
+                        .select('id')
+                        .eq('document_id', doc.id)
+                        .eq('embedding_type', 'verbatim')
+                        .limit(1);
+                    
+                    const hasChunks = chunks && chunks.length > 0;
+                    const recommendation = hasChunks ? '✅ Deve ser aprovado' : '❌ Deve ser rejeitado';
+                    
+                    log(`   - ${doc.name} (${minutesStuck}min) ${recommendation}`);
+                }
+
+            } catch (error) {
+                log(`❌ Erro: ${error.message}`, 'error');
+            } finally {
+                hideLoading(button, originalText);
+            }
+        }
+
+        async function runEnhancedCleanup() {
+            const button = event.target;
+            const originalText = button.textContent;
+            showLoading(button);
+            
+            try {
+                log('🧹 Executando limpeza aprimorada...');
+                
+                const { data, error } = await supabase.functions.invoke('cleanup-stuck-documents-enhanced');
+                
+                if (error) {
+                    throw error;
+                }
+
+                log('✅ Resultado da limpeza aprimorada:');
+                log(JSON.stringify(data, null, 2));
+                
+                if (data.success && data.cleaned > 0) {
+                    log(`🎉 ${data.cleaned} documentos processados!`);
+                    log(`   - ${data.approved || 0} aprovados`);
+                    log(`   - ${data.rejected || 0} rejeitados`);
+                } else {
+                    log('ℹ️ Nenhum documento travado encontrado');
+                }
+
+                // Refresh metrics
+                await checkDocuments();
+
+            } catch (error) {
+                log(`❌ Erro na limpeza aprimorada: ${error.message}`, 'error');
+            } finally {
+                hideLoading(button, originalText);
+            }
+        }
+
+        async function runOriginalCleanup() {
+            const button = event.target;
+            const originalText = button.textContent;
+            showLoading(button);
+            
+            try {
+                log('🔧 Executando limpeza original...');
+                
+                const { data, error } = await supabase.functions.invoke('cleanup-stuck-documents');
+                
+                if (error) {
+                    throw error;
+                }
+
+                log('✅ Resultado da limpeza original:');
+                log(JSON.stringify(data, null, 2));
+
+                // Refresh metrics
+                await checkDocuments();
+
+            } catch (error) {
+                log(`❌ Erro na limpeza original: ${error.message}`, 'error');
+            } finally {
+                hideLoading(button, originalText);
+            }
+        }
+
+        async function runReprocessDocument() {
+            const documentId = prompt('ID do documento para reprocessar (deixe vazio para cancelar):');
+            if (!documentId) return;
+            
+            const button = event.target;
+            const originalText = button.textContent;
+            showLoading(button);
+            
+            try {
+                log(`🔄 Reprocessando documento: ${documentId}`);
+                
+                const { data, error } = await supabase.functions.invoke('reprocess-document', {
+                    body: { document_id: documentId }
+                });
+                
+                if (error) {
+                    throw error;
+                }
+
+                log('✅ Resultado do reprocessamento:');
+                log(JSON.stringify(data, null, 2));
+
+            } catch (error) {
+                log(`❌ Erro no reprocessamento: ${error.message}`, 'error');
+            } finally {
+                hideLoading(button, originalText);
+            }
+        }
+
+        // Auto-check documents on load
+        window.addEventListener('load', () => {
+            log('🚀 Sistema de limpeza aprimorada carregado!');
+            log('📋 Verificando status inicial dos documentos...');
+            checkDocuments();
+        });
+    </script>
+</body>
+</html>

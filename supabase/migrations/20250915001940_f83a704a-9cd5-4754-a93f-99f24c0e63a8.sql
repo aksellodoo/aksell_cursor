@@ -1,0 +1,1 @@
+UPDATE documents SET status = 'Rejeitado', error_message = 'Erro de OCR - documento será reprocessado' WHERE id = 'd0f2d759-2d37-48ad-bd43-55fe5f4a5ada';
