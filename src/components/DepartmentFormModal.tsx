@@ -335,7 +335,7 @@ export const DepartmentFormModal = ({ open, onClose, department }: DepartmentFor
                   </PopoverTrigger>
                   <PopoverContent className="w-[420px]">
                     <div className="space-y-2">
-                      <h4 className="font-medium text-sm">Selecione um ícone (68 disponíveis)</h4>
+                      <h4 className="font-medium text-sm">Selecione um ícone (67 disponíveis)</h4>
                       <div className="grid grid-cols-7 gap-2 max-h-[400px] overflow-y-auto pr-2">
                         {AVAILABLE_ICONS.map(({ name, label, component: IconComp }) => (
                           <Button

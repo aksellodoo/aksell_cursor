@@ -41,7 +41,6 @@ import {
   TrendingUp,
   Database,
   Settings,
-  Tool,
   Cog,
   Zap,
   Activity,
@@ -115,7 +114,6 @@ export const ICON_MAP: Record<string, LucideIcon> = {
   'TrendingUp': TrendingUp,
   'Database': Database,
   'Settings': Settings,
-  'Tool': Tool,
   'Cog': Cog,
   'Zap': Zap,
   'Activity': Activity,
@@ -199,8 +197,7 @@ export const AVAILABLE_ICONS = [
   { name: 'Truck', label: 'Logística/Transporte', component: Truck },
   { name: 'Warehouse', label: 'Armazém/Estoque', component: Warehouse },
   { name: 'Factory', label: 'Produção/Manufatura', component: Factory },
-  { name: 'Tool', label: 'Ferramentas/Utilitários', component: Tool },
-  { name: 'Wrench', label: 'Manutenção', component: Wrench },
+  { name: 'Wrench', label: 'Manutenção/Ferramentas', component: Wrench },
   { name: 'Hammer', label: 'Obras/Construção', component: Hammer },
 
   // Qualidade/P&D

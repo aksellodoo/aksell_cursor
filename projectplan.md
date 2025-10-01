@@ -14,7 +14,19 @@
 
 ### 2025-10-01
 
-#### Correção Edge Function + Expansão de Ícones (25 → 68 ícones)
+#### Correção Preview em Branco + Ajuste Ícones (68 → 67 ícones)
+- ✅ **Correção Preview em Branco:**
+  - **Problema:** Preview mostrava tela branca após expansão de ícones
+  - **Causa:** Ícone "Tool" não existe no Lucide React (usado PenTool ou Wrench)
+  - **Solução:** Removido ícone "Tool" de todos os arquivos
+  - Build agora funciona corretamente ✓
+  - Arquivos corrigidos:
+    - `src/utils/departmentIcons.ts` - Removido import e referências ao Tool
+    - `supabase/functions/suggest-department-icon/index.ts` - Removido da lista
+    - `src/components/DepartmentFormModal.tsx` - Atualizado contador 68→67
+  - Label de Wrench atualizado: "Manutenção" → "Manutenção/Ferramentas"
+
+#### Correção Edge Function + Expansão de Ícones (25 → 67 ícones)
 - ✅ **Correção Edge Function suggest-department-icon:**
   - Removido import relativo problemático de `errorUtils.ts`
   - Adicionada função `getErrorMessage()` inline na Edge Function
@@ -27,8 +39,8 @@
   - **Solução:** Import absoluto estava causando erro no Deno runtime
   - Arquivo: `supabase/functions/suggest-department-icon/index.ts`
 
-- ✅ **Expansão de Ícones (25 → 68 ícones):**
-  - **Novos ícones adicionados (43 novos):**
+- ✅ **Expansão de Ícones (25 → 67 ícones):**
+  - **Novos ícones adicionados (42 novos):**
     - Básicos: Home
     - Pessoas/RH: UsersRound, UserCheck, UserPlus, Contact
     - Financeiro: CreditCard, Coins, DollarSign, Receipt
@@ -36,7 +48,6 @@
     - TI/Tecnologia: Database, Settings, Cog, Zap
     - Marketing/Comunicação: Presentation, Radio, Rss, Video, Mic
     - Vendas/Comercial: Target, TrendingUp
-    - Operações/Logística: Tool
     - Qualidade/P&D: Award
     - Documentos: FileText, Files, FolderOpen, Clipboard, Notebook, FileCheck, BookOpen, Archive, Inbox
     - Análise: BarChart, LineChart, PieChart, Activity
@@ -53,8 +64,9 @@
 
 - ✅ **System Prompt da IA atualizado:**
   - Prompt reduzido e mais organizado (categorias numeradas)
-  - 68 ícones listados por categoria
+  - 67 ícones listados por categoria
   - Instruções mais claras sobre case-sensitivity
+  - Wrench atualizado como "manutenção/ferramentas"
   - Arquivo: `supabase/functions/suggest-department-icon/index.ts` (linhas 84-111)
 
 #### Campo de Ícone para Departamentos com Sugestão por IA (OpenAI GPT-4o)

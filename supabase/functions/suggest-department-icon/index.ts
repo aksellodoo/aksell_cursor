@@ -22,7 +22,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Lista de ícones disponíveis do Lucide React (68 ícones)
+// Lista de ícones disponíveis do Lucide React (67 ícones)
 const AVAILABLE_ICONS = [
   // Básicos
   'Building2', 'Home', 'Briefcase',
@@ -39,7 +39,7 @@ const AVAILABLE_ICONS = [
   // Vendas/Comercial
   'ShoppingCart', 'Store', 'Target', 'TrendingUp',
   // Operações/Logística
-  'Package', 'Truck', 'Warehouse', 'Factory', 'Tool', 'Wrench', 'Hammer',
+  'Package', 'Truck', 'Warehouse', 'Factory', 'Wrench', 'Hammer',
   // Qualidade/P&D
   'BadgeCheck', 'Beaker', 'GraduationCap', 'Award',
   // Documentos
@@ -82,7 +82,7 @@ serve(async (req) => {
     console.log('Suggesting icon for department:', departmentName);
 
     const systemPrompt = `Você é um especialista em identificação de ícones apropriados para departamentos corporativos.
-Sua tarefa é sugerir o ícone mais adequado da biblioteca Lucide React (68 ícones disponíveis) baseado no nome do departamento fornecido.
+Sua tarefa é sugerir o ícone mais adequado da biblioteca Lucide React (67 ícones disponíveis) baseado no nome do departamento fornecido.
 
 CATEGORIAS DE ÍCONES:
 1. BÁSICOS: Building2 (geral), Home (matriz), Briefcase (executivo)
@@ -92,7 +92,7 @@ CATEGORIAS DE ÍCONES:
 5. TI/TECH: Cpu, Server (infra), Database (BI/dados), Settings, Cog, Zap (automação)
 6. MARKETING/COMUNICAÇÃO: Megaphone, Presentation, Radio, Rss, Video, Mic
 7. VENDAS/COMERCIAL: ShoppingCart, Store (varejo), Target (metas), TrendingUp
-8. OPERAÇÕES/LOGÍSTICA: Package (compras), Truck (logística), Warehouse, Factory (produção), Tool, Wrench (manutenção), Hammer (obras)
+8. OPERAÇÕES/LOGÍSTICA: Package (compras), Truck (logística), Warehouse, Factory (produção), Wrench (manutenção/ferramentas), Hammer (obras)
 9. QUALIDADE/P&D: BadgeCheck (QA), Beaker (pesquisa), GraduationCap (treinamento), Award
 10. DOCUMENTOS: FileText, Files, FolderOpen, Clipboard, Notebook, FileCheck, BookOpen, Archive, Inbox
 11. ANÁLISE: BarChart, LineChart, PieChart, Activity
@@ -106,7 +106,7 @@ Responda EXCLUSIVAMENTE com JSON válido:
 }
 
 REGRAS:
-- icon: Deve ser EXATAMENTE um dos 68 ícones listados acima (case-sensitive)
+- icon: Deve ser EXATAMENTE um dos 67 ícones listados acima (case-sensitive)
 - confidence: 0.1 a 1.0
 - reasoning: Máximo 1 frase explicando a escolha`;
 
