@@ -14,6 +14,49 @@
 
 ### 2025-10-01
 
+#### Diagnóstico e Documentação do Erro da Edge Function
+- ✅ **Diagnóstico do Erro:**
+  - **Problema:** Ao clicar em "Sugerir com IA", erro "Edge Function failed"
+  - **Causa:** Edge Function `suggest-department-icon` **NÃO está deployada** no Supabase
+  - **Motivo:** Edge Functions precisam ser deployadas manualmente via Supabase CLI
+  - Status atual: Função existe localmente em `supabase/functions/suggest-department-icon/`
+
+- ✅ **Melhorias no Tratamento de Erros:**
+  - Adicionado logging detalhado no console (message, status, statusText, context)
+  - Mensagens de erro mais específicas:
+    - "Edge Function não encontrada" → indica que precisa deployar
+    - "OpenAI API key não configurada" → indica secret faltando
+  - Arquivo: `src/components/DepartmentFormModal.tsx` (linhas 154-180)
+
+- ✅ **Documentação Completa de Deploy:**
+  - Criado `supabase/functions/suggest-department-icon/README.md`
+  - Inclui:
+    - Pré-requisitos (Supabase CLI)
+    - Comandos de instalação (macOS/Windows/Linux)
+    - Processo completo de deploy (4 passos)
+    - Como configurar OPENAI_API_KEY
+    - Testes locais com curl
+    - Monitoramento de logs
+    - Troubleshooting detalhado
+
+- ⚠️ **AÇÃO NECESSÁRIA - Deploy Manual:**
+  ```bash
+  # 1. Instalar Supabase CLI
+  brew install supabase/tap/supabase
+
+  # 2. Login
+  supabase login
+
+  # 3. Link com projeto
+  supabase link --project-ref nahyrexnxhzutfeqxjte
+
+  # 4. Configurar secret
+  supabase secrets set OPENAI_API_KEY=<sua_chave>
+
+  # 5. Deploy da função
+  supabase functions deploy suggest-department-icon
+  ```
+
 #### Correção Preview em Branco + Ajuste Ícones (68 → 67 ícones)
 - ✅ **Correção Preview em Branco:**
   - **Problema:** Preview mostrava tela branca após expansão de ícones

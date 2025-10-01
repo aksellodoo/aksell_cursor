@@ -153,9 +153,25 @@ export const DepartmentFormModal = ({ open, onClose, department }: DepartmentFor
       }
     } catch (error: any) {
       console.error('Error suggesting icon:', error);
+      console.error('Error details:', {
+        message: error.message,
+        status: error.status,
+        statusText: error.statusText,
+        context: error.context,
+      });
+
+      let errorMessage = error.message || "Tente novamente";
+
+      // Mensagens de erro mais específicas
+      if (error.message?.includes('FunctionsRelayError') || error.message?.includes('Failed to fetch')) {
+        errorMessage = "Edge Function não encontrada. Verifique se 'suggest-department-icon' está deployada no Supabase.";
+      } else if (error.message?.includes('API key')) {
+        errorMessage = "OpenAI API key não configurada. Verifique os secrets do Supabase.";
+      }
+
       toast({
         title: "Erro ao sugerir ícone",
-        description: error.message || "Tente novamente",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
