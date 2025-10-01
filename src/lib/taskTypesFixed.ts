@@ -177,78 +177,104 @@ export const TASK_TYPES: Record<FixedTaskType, {
   icon: any;
   color: string;
   description: string;
+  actionLabel: string;
+  hasSpecialProcessing: boolean;
 }> = {
   approval: {
     label: "Aprovação",
     icon: Users,
     color: "hsl(var(--chart-3))",
-    description: "Solicitar aprovação de usuários específicos"
+    description: "Solicitar aprovação de usuários específicos",
+    actionLabel: "Processar Aprovação",
+    hasSpecialProcessing: true
   },
   signature: {
     label: "Assinatura",
     icon: FileSignature,
     color: "hsl(var(--chart-1))",
-    description: "Obter assinaturas em documentos"
+    description: "Obter assinaturas em documentos",
+    actionLabel: "Assinar",
+    hasSpecialProcessing: true
   },
   form: {
     label: "Formulário",
     icon: FileText,
     color: "hsl(var(--chart-2))",
-    description: "Preenchimento de formulário específico"
+    description: "Preenchimento de formulário específico",
+    actionLabel: "Preencher",
+    hasSpecialProcessing: true
   },
   review: {
     label: "Revisão",
     icon: Eye,
     color: "hsl(var(--chart-4))",
-    description: "Revisão de conteúdo ou documento"
+    description: "Revisão de conteúdo ou documento",
+    actionLabel: "Revisar",
+    hasSpecialProcessing: true
   },
   simple_task: {
     label: "Tarefa simples",
     icon: CheckSquare,
     color: "hsl(var(--chart-5))",
-    description: "Tarefa geral sem campos específicos"
+    description: "Tarefa geral sem campos específicos",
+    actionLabel: "Concluir",
+    hasSpecialProcessing: false
   },
   call: {
     label: "Ligação",
     icon: Phone,
     color: "hsl(var(--primary))",
-    description: "Realizar ligação telefônica"
+    description: "Realizar ligação telefônica",
+    actionLabel: "Registrar Ligação",
+    hasSpecialProcessing: false
   },
   email: {
     label: "E-mail",
     icon: Mail,
     color: "hsl(var(--secondary))",
-    description: "Enviar e-mail para destinatários"
+    description: "Enviar e-mail para destinatários",
+    actionLabel: "Enviar",
+    hasSpecialProcessing: false
   },
   meeting: {
     label: "Agendar reunião",
     icon: Calendar,
     color: "hsl(var(--accent))",
-    description: "Agendar reunião com participantes"
+    description: "Agendar reunião com participantes",
+    actionLabel: "Agendar",
+    hasSpecialProcessing: false
   },
   import_file: {
     label: "Importar arquivo",
     icon: Upload,
     color: "hsl(var(--muted-foreground))",
-    description: "Importar arquivo para o sistema"
+    description: "Importar arquivo para o sistema",
+    actionLabel: "Importar",
+    hasSpecialProcessing: false
   },
   update_file: {
     label: "Atualizar arquivo",
     icon: RefreshCw,
     color: "hsl(var(--destructive))",
-    description: "Atualizar arquivo existente"
+    description: "Atualizar arquivo existente",
+    actionLabel: "Atualizar",
+    hasSpecialProcessing: false
   },
   document_delivery: {
     label: "Entrega de documento",
     icon: Package,
     color: "hsl(var(--warning))",
-    description: "Entregar documento a destinatário"
+    description: "Entregar documento a destinatário",
+    actionLabel: "Entregar",
+    hasSpecialProcessing: false
   },
   workflow: {
     label: "Workflow",
     icon: Workflow,
     color: "hsl(var(--success))",
-    description: "Executar workflow automatizado"
+    description: "Executar workflow automatizado",
+    actionLabel: "Executar",
+    hasSpecialProcessing: false
   }
 };
 

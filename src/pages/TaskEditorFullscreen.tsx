@@ -37,7 +37,6 @@ const taskFormSchema = z.object({
   expected_completion_at: z.string().optional(),
   deadline_at: z.string().optional(),
   estimated_hours: z.number().min(0).optional(),
-  list_in_pending: z.boolean().default(false),
   tags: z.array(z.string()).default([]),
   payload: z.record(z.any()).default({}),
 }).refine((data) => {
@@ -72,9 +71,6 @@ export const TaskEditorFullscreen: React.FC = () => {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(urlTemplateId || null);
   const [payloadValid, setPayloadValid] = useState(true);
   const [showTemplateDrawer, setShowTemplateDrawer] = useState(false);
-  const [showFileSelection, setShowFileSelection] = useState(false);
-  const [selectedFileId, setSelectedFileId] = useState<string>('');
-  const [selectedFileName, setSelectedFileName] = useState<string>('');
   const [selectedAttachments, setSelectedAttachments] = useState<Array<{id: string, name: string}>>([]);
   const [showAttachmentsSelection, setShowAttachmentsSelection] = useState(false);
 
@@ -133,7 +129,6 @@ export const TaskEditorFullscreen: React.FC = () => {
       priority: 'P3',
       assignment_type: 'individual',
       assigned_users: [],
-      list_in_pending: false,
       tags: [],
       payload: {},
     },
@@ -163,13 +158,86 @@ export const TaskEditorFullscreen: React.FC = () => {
     }
   }, [watchedValues, updateFormState, draftLoading]);
 
-  // Validate payload
+  // Auto-fill file_id when attachment is selected for approval type
   useEffect(() => {
-    if (selectedFixedType && watchedValues.payload) {
-      const validation = validateTaskPayload(selectedFixedType, watchedValues.payload);
-      setPayloadValid(validation.success);
+    if (selectedFixedType === 'approval' && selectedAttachments.length > 0) {
+      // Auto-set data_source to 'file' if not set
+      if (!watchedValues.payload?.data_source) {
+        console.log('🔗 Auto-setting data_source to "file"');
+        setValue('payload.data_source', 'file');
+      }
+      
+      // Use the first selected attachment as file_id
+      const firstFileId = selectedAttachments[0].id;
+      if (watchedValues.payload?.data_source === 'file' && watchedValues.payload.file_id !== firstFileId) {
+        console.log('🔗 Auto-filling file_id:', firstFileId);
+        setValue('payload.file_id', firstFileId);
+      }
     }
-  }, [selectedFixedType, watchedValues.payload]);
+  }, [selectedFixedType, selectedAttachments, watchedValues.payload?.data_source, setValue]);
+
+  // Validate payload - incluindo file_id auto-preenchido para approval
+  useEffect(() => {
+    if (selectedFixedType) {
+      // Para approval com data_source 'file', incluir file_id se houver anexo selecionado
+      let payloadToValidate = { ...(watchedValues.payload || {}) };
+      
+      // Debug: mostrar estado atual
+      console.log('🔍 Validation debug:', {
+        selectedFixedType,
+        payloadExists: !!watchedValues.payload,
+        dataSource: payloadToValidate.data_source,
+        fileId: payloadToValidate.file_id,
+        attachmentsCount: selectedAttachments.length,
+        firstAttachmentId: selectedAttachments[0]?.id
+      });
+      
+      if (selectedFixedType === 'approval' && 
+          payloadToValidate.data_source === 'file' && 
+          selectedAttachments.length > 0) {
+        // Sempre usar o primeiro anexo como file_id
+        payloadToValidate.file_id = selectedAttachments[0].id;
+        console.log('🔗 Auto-setting file_id:', payloadToValidate.file_id);
+      }
+      
+      const validation = validateTaskPayload(selectedFixedType, payloadToValidate);
+      console.log('🔍 Payload validation result:', {
+        fixedType: selectedFixedType,
+        originalPayload: watchedValues.payload,
+        validatedPayload: payloadToValidate,
+        validation: validation,
+        success: validation.success,
+        errors: validation.errors
+      });
+      setPayloadValid(validation.success);
+    } else {
+      setPayloadValid(false);
+    }
+  }, [selectedFixedType, watchedValues.payload, selectedAttachments]);
+
+  // Revalidar quando a aba volta a ficar ativa (fix para problema de tab refresh)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && selectedFixedType && watchedValues.payload) {
+        console.log('🔄 Tab became active, revalidating payload...');
+        // Força revalidação quando a aba volta a ficar ativa
+        let payloadToValidate = { ...watchedValues.payload };
+        
+        if (selectedFixedType === 'approval' && 
+            payloadToValidate.data_source === 'file' && 
+            selectedAttachments.length > 0 && 
+            !payloadToValidate.file_id) {
+          payloadToValidate.file_id = selectedAttachments[0].id;
+        }
+        
+        const validation = validateTaskPayload(selectedFixedType, payloadToValidate);
+        setPayloadValid(validation.success);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [selectedFixedType, watchedValues.payload, selectedAttachments]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -221,7 +289,6 @@ export const TaskEditorFullscreen: React.FC = () => {
       setValue('title', templateData.name);
       setValue('description', templateData.description || '');
       setValue('payload', templateData.default_payload || {});
-      setValue('list_in_pending', templateData.list_in_pending || false);
       if (templateData.default_assignee_id) {
         setValue('assignment_type', 'individual');
         setValue('assigned_to', templateData.default_assignee_id);
@@ -248,13 +315,31 @@ export const TaskEditorFullscreen: React.FC = () => {
   };
 
   const handleCreateTask = async (data: TaskFormData) => {
+    console.log('📝 TaskEditorFullscreen: Form submitted with data:', data);
+    console.log('🔍 TaskEditorFullscreen: Form errors:', form.formState.errors);
+    console.log('🎯 TaskEditorFullscreen: Selected fixed type:', selectedFixedType);
+    console.log('✅ TaskEditorFullscreen: Payload valid:', payloadValid);
+
     if (!selectedFixedType || !payloadValid) {
+      console.error('❌ TaskEditorFullscreen: Validation failed', { selectedFixedType, payloadValid });
       toast({
         variant: "destructive",
         title: "Dados inválidos",
         description: "Verifique todos os campos obrigatórios."
       });
       return;
+    }
+
+    // Validação específica para Aprovação de arquivo
+    if (selectedFixedType === 'approval' && data.payload?.data_source === 'file') {
+      if (selectedAttachments.length === 0) {
+        toast({
+          variant: "destructive",
+          title: "Arquivo obrigatório",
+          description: "Adicione pelo menos um arquivo na seção 'Anexos' para aprovação."
+        });
+        return;
+      }
     }
 
     const recurrenceSettings = getRecurrenceSettings();
@@ -274,7 +359,6 @@ export const TaskEditorFullscreen: React.FC = () => {
           base_template_snapshot: selectedTemplate ? {
             name: selectedTemplate.name,
             fixed_type: selectedTemplate.fixed_type,
-            list_in_pending: selectedTemplate.list_in_pending,
           } : undefined,
           assignment_type: data.assignment_type,
           assigned_to: data.assigned_to,
@@ -282,7 +366,6 @@ export const TaskEditorFullscreen: React.FC = () => {
           assigned_department: data.assigned_department,
           priority: data.priority,
           estimated_hours: data.estimated_hours,
-          list_in_pending: data.list_in_pending,
           tags: data.tags,
           dtstart: dtstart.toISOString(),
           rrule: `FREQ=${recurrenceSettings.frequency.toUpperCase()};INTERVAL=${recurrenceSettings.interval}`,
@@ -319,7 +402,6 @@ export const TaskEditorFullscreen: React.FC = () => {
           template_snapshot: selectedTemplate ? {
             name: selectedTemplate.name,
             fixed_type: selectedTemplate.fixed_type,
-            list_in_pending: selectedTemplate.list_in_pending,
           } : undefined,
         };
 
@@ -378,29 +460,15 @@ export const TaskEditorFullscreen: React.FC = () => {
           </div>
 
           {watch('payload.data_source') === 'file' && (
-            <div className="space-y-2">
-              <Label htmlFor="file_id">Arquivo *</Label>
-              <div className="flex items-center gap-2">
-                <div className="flex-1">
-                  {selectedFileName ? (
-                    <div className="flex items-center gap-2 p-2 border rounded-md bg-muted">
-                      <File className="h-4 w-4" />
-                      <span className="text-sm truncate">{selectedFileName}</span>
-                    </div>
-                  ) : (
-                    <div className="p-2 border rounded-md text-muted-foreground text-sm">
-                      Nenhum arquivo selecionado
-                    </div>
-                  )}
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowFileSelection(true)}
-                >
-                  {selectedFileName ? 'Alterar' : 'Escolher'} arquivo
-                </Button>
-              </div>
+            <div className="p-4 border rounded-lg bg-muted/30">
+              <p className="text-sm text-muted-foreground">
+                📎 Adicione o(s) arquivo(s) para aprovação na seção <strong>"Anexos"</strong> abaixo.
+                {selectedAttachments.length === 0 && (
+                  <span className="block mt-1 text-amber-600 dark:text-amber-500">
+                    ⚠️ Pelo menos um arquivo é obrigatório para aprovação.
+                  </span>
+                )}
+              </p>
             </div>
           )}
 
@@ -658,22 +726,6 @@ export const TaskEditorFullscreen: React.FC = () => {
                       )}
                     />
                   </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Controller
-                    name="list_in_pending"
-                    control={control}
-                    render={({ field }) => (
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    )}
-                  />
-                  <Label htmlFor="list_in_pending" className="cursor-pointer">
-                    Listar em "Pendentes" após criação
-                  </Label>
                 </div>
               </div>
 
@@ -939,11 +991,59 @@ export const TaskEditorFullscreen: React.FC = () => {
               <Button
                 type="submit"
                 form="task-form"
-                disabled={!selectedFixedType || !payloadValid}
+                disabled={!selectedFixedType || !payloadValid || !form.formState.isValid}
               >
                 Criar Tarefa
               </Button>
             </div>
+
+            {/* Debug: Mostrar erros de validação */}
+            {Object.keys(form.formState.errors).length > 0 && (
+              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm font-medium text-red-800 mb-2">Erros de validação:</p>
+                <ul className="list-disc list-inside text-sm text-red-700 space-y-1">
+                  {Object.entries(form.formState.errors).map(([key, error]) => (
+                    <li key={key}>
+                      <strong>{key}:</strong> {error?.message?.toString() || 'Erro desconhecido'}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Debug: Mostrar estado de validação */}
+            {(!selectedFixedType || !payloadValid) && (
+              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-sm font-medium text-yellow-800 mb-2">Validações pendentes:</p>
+                <ul className="list-disc list-inside text-sm text-yellow-700 space-y-1">
+                  {!selectedFixedType && <li>Tipo de tarefa não selecionado</li>}
+                  {!payloadValid && selectedFixedType && (() => {
+                    const validation = validateTaskPayload(selectedFixedType, watchedValues.payload || {});
+                    return (
+                      <>
+                        <li>Campos obrigatórios do tipo de tarefa não preenchidos</li>
+                        {validation.errors && validation.errors.length > 0 && (
+                          <li className="ml-4">
+                            <strong>Erros:</strong>
+                            <ul className="list-disc list-inside ml-4 mt-1">
+                              {validation.errors.map((error, idx) => {
+                                if (typeof error === 'string') {
+                                  return <li key={idx}>{error}</li>;
+                                }
+                                // Parse Zod error object
+                                const path = error.path ? error.path.join('.') : 'campo';
+                                const message = error.message || 'Campo inválido';
+                                return <li key={idx}><strong>{path}:</strong> {message}</li>;
+                              })}
+                            </ul>
+                          </li>
+                        )}
+                      </>
+                    );
+                  })()}
+                </ul>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -956,18 +1056,6 @@ export const TaskEditorFullscreen: React.FC = () => {
         onCreateNew={() => {
           setShowTemplateDrawer(false);
           toast({ title: "Criação de templates disponível na página de Templates" });
-        }}
-      />
-
-      {/* Modal for single file selection (for Approval type) */}
-      <DocumentSelectionModal
-        open={showFileSelection}
-        onOpenChange={setShowFileSelection}
-        onDocumentSelect={(docId, docName) => {
-          setSelectedFileId(docId);
-          setSelectedFileName(docName);
-          setValue('payload.file_id', docId);
-          setShowFileSelection(false);
         }}
       />
 

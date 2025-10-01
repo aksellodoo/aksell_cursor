@@ -46,6 +46,7 @@ interface FolderItem {
   doc_count: number;
   descendant_count?: number;
   updated_at: string;
+  allow_delete: boolean;
   children?: FolderItem[];
 }
 
@@ -90,7 +91,17 @@ export const FolderManagementModal = ({
     }
   };
 
-  const deleteFolder = async (folderId: string) => {
+  const deleteFolder = async (folderId: string, allowDelete: boolean) => {
+    // Check if folder is protected from deletion
+    if (!allowDelete) {
+      toast({
+        title: "Pasta protegida",
+        description: "Esta pasta está protegida contra exclusão. Edite as configurações da pasta para permitir exclusão.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       await deleteFolderHook(folderId);
       toast({
@@ -141,7 +152,7 @@ export const FolderManagementModal = ({
       const { data: foldersData, error } = await supabase
         .from('folders')
         .select(`
-          id, name, status, parent_folder_id, updated_at,
+          id, name, status, parent_folder_id, updated_at, allow_delete,
           folder_document_counts(doc_count)
         `)
         .eq('department_id', departmentId)
@@ -328,6 +339,7 @@ export const FolderManagementModal = ({
               <Folder className="h-4 w-4 text-muted-foreground" />
             )}
             {hasAcl && <Lock className="h-3 w-3 text-amber-500" />}
+            {!folder.allow_delete && <Lock className="h-3 w-3 text-red-500" title="Protegida contra exclusão" />}
           </div>
 
           <div className="flex-1 min-w-0">
@@ -335,6 +347,11 @@ export const FolderManagementModal = ({
               <span className="font-medium truncate">{folder.name}</span>
               {folder.slug && <span className="text-sm text-muted-foreground">({folder.slug})</span>}
               {getStatusBadge(folder.status)}
+              {!folder.allow_delete && (
+                <Badge variant="destructive" className="text-xs">
+                  Protegida
+                </Badge>
+              )}
             </div>
             <div className="flex items-center gap-4 text-xs text-muted-foreground">
               <span className="flex items-center gap-1">
@@ -393,19 +410,51 @@ export const FolderManagementModal = ({
                 <Merge className="mr-2 h-4 w-4" />
                 Mesclar
               </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={async () => {
+                const newAllowDelete = !folder.allow_delete;
+                try {
+                  const { error } = await supabase
+                    .from('folders')
+                    .update({ allow_delete: newAllowDelete })
+                    .eq('id', folder.id);
+
+                  if (error) throw error;
+
+                  toast({
+                    title: newAllowDelete ? "Proteção removida" : "Pasta protegida",
+                    description: newAllowDelete
+                      ? "A pasta agora pode ser excluída."
+                      : "A pasta está protegida contra exclusão.",
+                  });
+
+                  fetchFoldersHierarchy();
+                  refetch();
+                } catch (error: any) {
+                  toast({
+                    title: "Erro ao atualizar pasta",
+                    description: error.message,
+                    variant: "destructive",
+                  });
+                }
+              }}>
+                <Lock className="mr-2 h-4 w-4" />
+                {folder.allow_delete ? 'Proteger contra exclusão' : 'Remover proteção'}
+              </DropdownMenuItem>
               {folder.doc_count === 0 && (!folder.children || folder.children.length === 0) && (
                 <>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem 
+                  <DropdownMenuItem
                     className="text-destructive"
+                    disabled={!folder.allow_delete}
                     onClick={() => {
                       if (confirm(`Tem certeza que deseja excluir a pasta "${folder.name}"?`)) {
-                        deleteFolder(folder.id);
+                        deleteFolder(folder.id, folder.allow_delete);
                       }
                     }}
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
-                    Excluir
+                    Excluir {!folder.allow_delete && '(Protegida)'}
                   </DropdownMenuItem>
                 </>
               )}

@@ -236,12 +236,6 @@ const TemplateCard: React.FC<TemplateCardProps> = ({
                   <span>Por você</span>
                 )}
               </div>
-
-              {template.list_in_pending && (
-                <Badge variant="secondary" className="text-xs">
-                  Pendente
-                </Badge>
-              )}
             </div>
           </div>
         </div>

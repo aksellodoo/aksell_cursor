@@ -17,6 +17,14 @@ function getErrorMessage(error: unknown): string {
   return String(error);
 }
 
+// Utility function to clean JSON response from markdown code blocks
+function cleanJsonResponse(text: string): string {
+  return text
+    .replace(/```json\s*/g, '')
+    .replace(/```\s*$/g, '')
+    .trim();
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -132,6 +140,7 @@ Analise o nome e sugira o ícone que melhor representa este departamento.`;
         ],
         max_tokens: 200,
         temperature: 0.3,
+        response_format: { type: "json_object" },
       }),
     });
 
@@ -145,9 +154,12 @@ Analise o nome e sugira o ícone que melhor representa este departamento.`;
     console.log('OpenAI response received, tokens used:', data.usage?.total_tokens);
 
     const suggestion = data.choices[0]?.message?.content?.trim() || '';
+    console.log('Raw OpenAI suggestion:', suggestion);
 
     try {
-      const jsonResponse = JSON.parse(suggestion);
+      const cleanedResponse = cleanJsonResponse(suggestion);
+      console.log('Cleaned JSON response:', cleanedResponse);
+      const jsonResponse = JSON.parse(cleanedResponse);
 
       // Validar se o ícone sugerido está na lista
       const suggestedIcon = jsonResponse.icon || 'Building2';

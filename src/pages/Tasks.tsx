@@ -24,6 +24,7 @@ export const Tasks = () => {
   const navigate = useNavigate();
   const [selectedTask, setSelectedTask] = useState(null);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+  const [activeViewTab, setActiveViewTab] = useState('kanban');
 
   if (loading) {
     return (
@@ -40,6 +41,11 @@ export const Tasks = () => {
 
   const handleStatusChange = (taskId: string, status: string) => {
     updateTaskStatus(taskId, status);
+  };
+
+  const handleProcessTask = (task: any) => {
+    // Navegar para a tela de processamento da tarefa
+    navigate(`/tasks/${task.id}/edit`);
   };
 
   const handleCreateTemplateSuccess = () => {
@@ -105,7 +111,7 @@ export const Tasks = () => {
 
           {/* Aba Listagem de Tarefas */}
           <TabsContent value="listagem">
-            <Tabs defaultValue="kanban" className="space-y-6">
+            <Tabs value={activeViewTab} onValueChange={setActiveViewTab} className="space-y-6">
               <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="kanban" className="flex items-center gap-2">
                   <LayoutGrid className="h-4 w-4" />
@@ -138,6 +144,7 @@ export const Tasks = () => {
                   tasks={tasks}
                   onTaskSelect={handleTaskSelect}
                   onStatusChange={handleStatusChange}
+                  onProcessTask={handleProcessTask}
                 />
               </TabsContent>
 

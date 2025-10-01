@@ -474,3 +474,202 @@
   - `src/pages/TaskEditorFullscreen.tsx` - Nova seção de anexos e lógica
 
 - Preview local atualizado e funcionando ✓
+
+#### Remoção do Campo "Listar em Pendentes" - 02/10/2025 12:00
+- ✅ **Requisito do usuário:**
+  - Remover campo "Listar em 'Pendentes' após criação" da tela de criação de tarefas
+  - Campo não faz sentido algum para nenhum tipo de tarefa
+  - Apagar campo do Supabase também
+
+- ✅ **TaskEditorFullscreen.tsx:**
+  - Removido `list_in_pending: z.boolean().default(false)` do Zod schema
+  - Removido `list_in_pending: false` dos defaultValues
+  - Removido `setValue('list_in_pending', selectedTemplate.list_in_pending || false)` ao carregar template
+  - Removido do objeto de criação de task_series (2 ocorrências)
+  - Removido do objeto de criação de task
+  - Removido do template snapshot
+  - Removido bloco completo do Switch UI (linhas 657-671)
+
+- ✅ **useTasks.tsx:**
+  - Removido `list_in_pending: boolean` da interface Task
+  - Removido `list_in_pending?: boolean` da interface TaskPayload
+  - Removida query filter: `query = (query as any).eq('list_in_pending', true)`
+  - Removidas todas as atribuições (8 ocorrências via replace_all)
+
+- ✅ **useTaskTemplates.tsx:**
+  - Removido `list_in_pending?: boolean` das interfaces TaskTemplate e CreateTaskTemplateData
+
+- ✅ **TemplatePickerDrawer.tsx:**
+  - Removido bloco de exibição do badge "Pendente" (linhas 240-244)
+
+- ✅ **Migration Supabase criada:**
+  - Arquivo: `supabase/migrations/20251002120000_remove_list_in_pending.sql`
+  - Drop dos índices: `idx_tasks_pending_expected` e `idx_tasks_pending_deadline`
+  - Drop da coluna `list_in_pending` das tabelas:
+    - `public.tasks`
+    - `public.task_templates`
+    - `public.task_series`
+
+- ✅ **Resultado:**
+  - Campo completamente removido do frontend (UI + TypeScript)
+  - Migration pronta para remover do banco de dados
+  - Sistema mais limpo e sem funcionalidade obsoleta
+
+- Preview local atualizado e funcionando ✓
+
+#### Simplificação do Campo de Aprovação "De arquivo" - 02/10/2025 12:00
+- ✅ **Requisito do usuário:**
+  - Quando tipo Aprovação + "De arquivo": remover campo/botão de seleção de arquivo individual
+  - Usar apenas o campo "Anexos" (que já permite múltiplos arquivos para todos os tipos)
+  - Garantir que pelo menos 1 arquivo foi anexado antes de criar tarefa
+  - Manter apenas campo "Critérios de Aprovação"
+
+- ✅ **TaskEditorFullscreen.tsx - Remoção de código:**
+  - Removidos estados não utilizados:
+    - `showFileSelection` (linha 74)
+    - `selectedFileId` (linha 75)
+    - `selectedFileName` (linha 76)
+  - Removido bloco completo de seleção individual de arquivo (linhas 374-399):
+    - Label "Arquivo *"
+    - Preview do arquivo selecionado
+    - Botão "Escolher/Alterar arquivo"
+  - Removido DocumentSelectionModal para seleção única (linhas 923-933)
+
+- ✅ **TaskEditorFullscreen.tsx - Nova UI:**
+  - Quando `data_source === 'file'`: mostra card informativo
+  - Texto: "📎 Adicione o(s) arquivo(s) para aprovação na seção 'Anexos' abaixo"
+  - Aviso em amarelo quando não há arquivos: "⚠️ Pelo menos um arquivo é obrigatório para aprovação"
+  - Card com background sutil (`bg-muted/30`) e borda arredondada
+
+- ✅ **Validação implementada:**
+  - Função `handleCreateTask` valida antes de criar tarefa
+  - Se `approval` + `data_source === 'file'` + `selectedAttachments.length === 0`:
+    - Toast de erro: "Arquivo obrigatório"
+    - Descrição: "Adicione pelo menos um arquivo na seção 'Anexos' para aprovação"
+    - Previne criação da tarefa
+
+- ✅ **Estrutura final para Aprovação "De arquivo":**
+  ```
+  1. Campo: Origem do Dado da Aprovação (select)
+  2. Card informativo: direcionando para seção Anexos
+  3. Campo: Critérios de Aprovação (textarea, opcional)
+  4. Seção Anexos (mais abaixo, comum a todos os tipos)
+  ```
+
+- ✅ **Benefícios:**
+  - Interface mais limpa e sem duplicação
+  - Fluxo consistente: todos os arquivos vão para Anexos
+  - Validação clara e mensagens informativas
+  - Menos estados e código para manter
+  - UX melhorada: menos confusão sobre onde adicionar arquivos
+
+- Preview local atualizado e funcionando ✓
+
+#### Melhorias na Tela de Editar Departamentos e Campo "Permitir Apagar" em Subpastas - 02/10/2025 13:00
+- ✅ **Problema 1: Botão duplicado "Gerenciar Subpastas"**
+  - **Situação:** Existiam 2 botões idênticos no `DepartmentFormModal.tsx`
+  - **Solução:** Removido botão duplicado (linhas 488-497)
+  - **Mantido:** Apenas o botão na seção de documentos (linha 475)
+  - Interface mais limpa e sem confusão
+
+- ✅ **Problema 2: Campo "Permitir Apagar" em Subpastas**
+  - **Requisito:** Campo boolean para controlar se pasta pode ser excluída
+  - **Implementação completa:**
+
+- ✅ **Migration Supabase:**
+  - Arquivo: `supabase/migrations/20251002130000_add_folder_allow_delete.sql`
+  - Adicionada coluna `allow_delete BOOLEAN NOT NULL DEFAULT true` na tabela `folders`
+  - Índice criado: `idx_folders_allow_delete` para performance
+  - Valor padrão `true`: todas as pastas existentes continuam deletáveis
+  - Comentário explicativo no campo
+
+- ✅ **FolderManagementModal.tsx - Interface e UI:**
+  - Adicionado `allow_delete: boolean` à interface `FolderItem`
+  - Campo `allow_delete` incluído no SELECT do Supabase
+  - **Ícone Lock vermelho** ao lado de pastas protegidas (title: "Protegida contra exclusão")
+  - **Badge "Protegida"** (variant destructive) ao lado do nome da pasta
+  - **Nova opção no menu dropdown:**
+    - "Proteger contra exclusão" (quando `allow_delete = true`)
+    - "Remover proteção" (quando `allow_delete = false`)
+    - Toggle simples com ícone Lock
+  - **Opção "Excluir" do menu:**
+    - Desabilitada visualmente quando `allow_delete = false`
+    - Texto atualizado: "Excluir (Protegida)" quando não pode ser excluída
+    - Condição existente mantida: só aparece se pasta vazia (sem documentos e sem filhos)
+
+- ✅ **Validação de Exclusão:**
+  - Função `deleteFolder` recebe parâmetro `allowDelete`
+  - Verifica proteção ANTES de chamar hook de exclusão
+  - Toast de erro explicativo:
+    - Título: "Pasta protegida"
+    - Descrição: "Esta pasta está protegida contra exclusão. Edite as configurações da pasta para permitir exclusão."
+  - Previne exclusão tanto no frontend quanto no backend
+
+- ✅ **Feedback Visual Completo:**
+  - 🔒 **Ícone Lock vermelho:** indica proteção de exclusão
+  - 🏷️ **Badge "Protegida":** destaque visual na lista
+  - ⚠️ **Opção desabilitada no menu:** não permite clicar em excluir
+  - 💬 **Toast explicativo:** mensagem clara ao tentar excluir pasta protegida
+  - ✅ **Toggle fácil:** um clique para proteger/desproteger
+
+- ✅ **Resultado:**
+  - Interface limpa sem botões duplicados
+  - Sistema robusto de proteção de pastas críticas
+  - UX intuitiva com múltiplos indicadores visuais
+  - Segurança: pastas importantes não podem ser excluídas acidentalmente
+  - Flexibilidade: administrador pode proteger/desproteger facilmente
+  - Retrocompatível: pastas existentes continuam deletáveis por padrão
+
+- Preview local atualizado e funcionando ✓
+
+#### Correção: Tarefas não aparecem na Aba Lista - 02/10/2025 13:30
+- ✅ **Problema relatado:**
+  - Tarefas criadas (tipo Aprovação) não aparecem na aba "Lista" dentro de "Listagem de Tarefas"
+  - Após criar tarefa, ao voltar para "Lista", a lista aparece vazia
+
+- ✅ **Causa identificada:**
+  - Query em `useTasks.tsx` era muito simples: `SELECT *` sem JOINs
+  - Não carregava dados relacionados (perfis, departamentos, templates)
+  - Possível problema com RLS (Row Level Security) no Supabase
+  - Faltava logging para debug
+
+- ✅ **Solução implementada:**
+
+  **1. Query melhorada com JOINs** (src/hooks/useTasks.tsx linhas 139-148):
+  ```typescript
+  .select(`
+    *,
+    assigned_user:profiles!tasks_assigned_to_fkey(id, name, email),
+    created_user:profiles!tasks_created_by_fkey(id, name, email),
+    assigned_department_profile:departments(id, name, color),
+    template:task_templates(id, name, fixed_type)
+  `)
+  ```
+
+  **2. Logging detalhado adicionado:**
+  - Log de usuário fazendo a busca
+  - Log de quantidade de tarefas retornadas
+  - Log de tarefas formatadas (id, title, status)
+  - Log de erros completo
+
+  **3. Uso correto dos dados dos JOINs** (linhas 235-239):
+  - `assigned_user`: dados do perfil do usuário atribuído
+  - `created_user`: dados do criador da tarefa
+  - `assigned_department_profile`: dados do departamento
+  - `template`: dados do template usado
+
+- ✅ **Como debugar:**
+  - Abrir Console do navegador (F12)
+  - Acessar aba "Tarefas" > "Listagem de Tarefas" > "Lista"
+  - Verificar logs:
+    - `🔍 Fetching tasks for user: [user_id]`
+    - `✅ Fetched X tasks from database`
+    - `📋 Formatted tasks: [array]`
+  - Se nenhuma tarefa aparecer: verificar RLS no Supabase
+
+- ⚠️ **Próximos passos se ainda não funcionar:**
+  - Verificar políticas RLS na tabela `tasks` no Supabase
+  - Garantir que usuário tem permissão para SELECT
+  - Adicionar filtro explícito por created_by se necessário
+
+- Preview local atualizado e funcionando ✓

@@ -19,7 +19,6 @@ export interface TaskTemplate {
   allowed_departments?: string[];
   allowed_roles?: string[];
   confidentiality_level: 'public' | 'private' | 'department_leaders' | 'directors_admins';
-  list_in_pending?: boolean;
   default_priority?: 'P1' | 'P2' | 'P3' | 'P4';
   default_tags?: string[];
   default_expected_offset_hours?: number;
@@ -48,7 +47,6 @@ export interface CreateTaskTemplateData {
   allowed_departments?: string[];
   allowed_roles?: string[];
   confidentiality_level: 'public' | 'private' | 'department_leaders' | 'directors_admins';
-  list_in_pending?: boolean;
   default_priority?: 'P1' | 'P2' | 'P3' | 'P4';
   default_tags?: string[];
   default_expected_offset_hours?: number;

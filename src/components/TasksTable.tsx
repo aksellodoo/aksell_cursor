@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Task } from '@/hooks/useTasks';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -7,26 +7,37 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Search, ArrowUpDown, Calendar, Clock, User, Plus } from 'lucide-react';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { MoreHorizontal, Search, ArrowUpDown, Calendar, Clock, User, Plus, CheckCircle2, Circle, Users } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Card, CardContent } from '@/components/ui/card';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { TASK_TYPES, FixedTaskType } from '@/lib/taskTypesFixed';
 
 interface TasksTableProps {
   tasks: Task[];
   onTaskSelect?: (task: Task) => void;
   onStatusChange?: (taskId: string, status: string) => void;
   onCreateNew?: () => void;
+  onProcessTask?: (task: Task) => void;
 }
 
 type SortField = 'title' | 'status' | 'priority' | 'due_date' | 'fixed_type';
 type SortOrder = 'asc' | 'desc';
 
 const priorityConfig = {
+  // Legacy format
   urgent: { label: 'Urgente', variant: 'destructive' as const },
   high: { label: 'Alta', variant: 'default' as const },
   medium: { label: 'Média', variant: 'secondary' as const },
   low: { label: 'Baixa', variant: 'outline' as const },
+  // New P1-P4 format
+  P1: { label: 'Crítica', variant: 'destructive' as const },
+  P2: { label: 'Alta', variant: 'default' as const },
+  P3: { label: 'Média', variant: 'secondary' as const },
+  P4: { label: 'Baixa', variant: 'outline' as const },
 };
 
 const statusConfig = {
@@ -36,10 +47,14 @@ const statusConfig = {
   done: { label: 'Concluída', variant: 'default' as const, progress: 100 },
 };
 
-export const TasksTable = ({ tasks, onTaskSelect, onStatusChange, onCreateNew }: TasksTableProps) => {
+export const TasksTable = ({ tasks, onTaskSelect, onStatusChange, onCreateNew, onProcessTask }: TasksTableProps) => {
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [sortField, setSortField] = useState<SortField>('due_date');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
+  const [statusFilter, setStatusFilter] = useState<'pending' | 'completed'>('pending');
+  const [scopeFilter, setScopeFilter] = useState<'mine' | 'subordinates'>('mine');
+  const [subordinateIds, setSubordinateIds] = useState<string[]>([]);
 
   const isOverdue = (task: Task) => {
     if (!task.due_date || task.status === 'done') return false;
@@ -51,6 +66,37 @@ export const TasksTable = ({ tasks, onTaskSelect, onStatusChange, onCreateNew }:
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
+  // Buscar subordinados recursivamente
+  useEffect(() => {
+    const fetchSubordinates = async () => {
+      if (!user?.id) return;
+
+      const getAllSubordinates = async (supervisorId: string): Promise<string[]> => {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('supervisor_id', supervisorId)
+          .eq('status', 'active');
+
+        if (error || !data) return [];
+
+        const directSubordinates = data.map(p => p.id);
+
+        // Buscar subordinados dos subordinados (recursivo)
+        const indirectSubordinates = await Promise.all(
+          directSubordinates.map(id => getAllSubordinates(id))
+        );
+
+        return [...directSubordinates, ...indirectSubordinates.flat()];
+      };
+
+      const allSubordinates = await getAllSubordinates(user.id);
+      setSubordinateIds(allSubordinates);
+    };
+
+    fetchSubordinates();
+  }, [user?.id]);
+
   const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
@@ -61,10 +107,28 @@ export const TasksTable = ({ tasks, onTaskSelect, onStatusChange, onCreateNew }:
   };
 
   const filteredAndSortedTasks = useMemo(() => {
-    let filtered = tasks.filter(task =>
-      task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      task.description?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    let filtered = tasks.filter(task => {
+      // Filtro de busca por texto
+      const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        task.description?.toLowerCase().includes(searchTerm.toLowerCase());
+
+      if (!matchesSearch) return false;
+
+      // Filtro por status (pendentes vs concluídas)
+      const isPending = task.status !== 'done';
+      const matchesStatus = statusFilter === 'pending' ? isPending : !isPending;
+
+      if (!matchesStatus) return false;
+
+      // Filtro por escopo (minhas vs subordinados)
+      if (scopeFilter === 'mine') {
+        // Minhas tarefas: onde eu sou assigned_to ou created_by
+        return task.assigned_to === user?.id || task.created_by === user?.id;
+      } else {
+        // Tarefas dos subordinados
+        return task.assigned_to && subordinateIds.includes(task.assigned_to);
+      }
+    });
 
     return filtered.sort((a, b) => {
       let aValue: any = a[sortField];
@@ -79,7 +143,7 @@ export const TasksTable = ({ tasks, onTaskSelect, onStatusChange, onCreateNew }:
       if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
       return 0;
     });
-  }, [tasks, searchTerm, sortField, sortOrder]);
+  }, [tasks, searchTerm, sortField, sortOrder, statusFilter, scopeFilter, subordinateIds, user?.id]);
 
   if (tasks.length === 0) {
     return (
@@ -99,9 +163,44 @@ export const TasksTable = ({ tasks, onTaskSelect, onStatusChange, onCreateNew }:
 
   return (
     <div className="space-y-4">
-      {/* Barra de busca */}
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1">
+      {/* Filtros e busca */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+        {/* Toggle de Status */}
+        <ToggleGroup
+          type="single"
+          value={statusFilter}
+          onValueChange={(value) => value && setStatusFilter(value as 'pending' | 'completed')}
+          className="justify-start"
+        >
+          <ToggleGroupItem value="pending" aria-label="Tarefas pendentes" className="flex items-center gap-2">
+            <Circle className="h-4 w-4" />
+            Pendentes
+          </ToggleGroupItem>
+          <ToggleGroupItem value="completed" aria-label="Tarefas concluídas" className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4" />
+            Concluídas
+          </ToggleGroupItem>
+        </ToggleGroup>
+
+        {/* Toggle de Escopo */}
+        <ToggleGroup
+          type="single"
+          value={scopeFilter}
+          onValueChange={(value) => value && setScopeFilter(value as 'mine' | 'subordinates')}
+          className="justify-start"
+        >
+          <ToggleGroupItem value="mine" aria-label="Minhas tarefas" className="flex items-center gap-2">
+            <User className="h-4 w-4" />
+            Minhas
+          </ToggleGroupItem>
+          <ToggleGroupItem value="subordinates" aria-label="Tarefas de subordinados" className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Subordinados {subordinateIds.length > 0 && `(${subordinateIds.length})`}
+          </ToggleGroupItem>
+        </ToggleGroup>
+
+        {/* Barra de busca */}
+        <div className="relative flex-1 w-full sm:w-auto">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Buscar por título ou descrição..."
@@ -174,7 +273,7 @@ export const TasksTable = ({ tasks, onTaskSelect, onStatusChange, onCreateNew }:
                 </Button>
               </TableHead>
               <TableHead className="hidden xl:table-cell">Progresso</TableHead>
-              <TableHead className="w-[50px]"></TableHead>
+              <TableHead className="w-[120px]">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -197,7 +296,7 @@ export const TasksTable = ({ tasks, onTaskSelect, onStatusChange, onCreateNew }:
                 <TableCell className="hidden md:table-cell">
                   {task.fixed_type ? (
                     <Badge variant="outline" className="text-xs">
-                      {task.fixed_type}
+                      {TASK_TYPES[task.fixed_type as FixedTaskType]?.label || task.fixed_type}
                     </Badge>
                   ) : (
                     <span className="text-xs text-muted-foreground">-</span>
@@ -257,34 +356,65 @@ export const TasksTable = ({ tasks, onTaskSelect, onStatusChange, onCreateNew }:
                   </div>
                 </TableCell>
                 <TableCell onClick={(e) => e.stopPropagation()}>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                        <MoreHorizontal className="h-4 w-4" />
+                  <div className="flex items-center gap-2">
+                    {/* Botão de ação contextual */}
+                    {task.fixed_type && TASK_TYPES[task.fixed_type as FixedTaskType] && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onProcessTask?.(task);
+                        }}
+                        disabled={task.status === 'done'}
+                        className="h-8 text-xs"
+                        style={{
+                          borderColor: TASK_TYPES[task.fixed_type as FixedTaskType]?.color,
+                          color: TASK_TYPES[task.fixed_type as FixedTaskType]?.color
+                        }}
+                      >
+                        <span className="hidden sm:inline">
+                          {TASK_TYPES[task.fixed_type as FixedTaskType]?.actionLabel}
+                        </span>
+                        <span className="sm:hidden">
+                          {React.createElement(TASK_TYPES[task.fixed_type as FixedTaskType]?.icon, { className: "h-4 w-4" })}
+                        </span>
                       </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => onTaskSelect?.(task)}>
-                        Ver Detalhes
-                      </DropdownMenuItem>
-                      {onStatusChange && (
-                        <>
-                          <DropdownMenuItem
-                            onClick={() => onStatusChange(task.id, 'in_progress')}
-                            disabled={task.status === 'in_progress'}
-                          >
-                            Marcar como Em Andamento
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => onStatusChange(task.id, 'done')}
-                            disabled={task.status === 'done'}
-                          >
-                            Marcar como Concluída
-                          </DropdownMenuItem>
-                        </>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                    )}
+
+                    {/* Menu de 3 pontos */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => onTaskSelect?.(task)}>
+                          Ver Detalhes
+                        </DropdownMenuItem>
+                        {onStatusChange && (
+                          <>
+                            <DropdownMenuItem
+                              onClick={() => onStatusChange(task.id, 'in_progress')}
+                              disabled={task.status === 'in_progress'}
+                            >
+                              Marcar como Em Andamento
+                            </DropdownMenuItem>
+                            {/* Ocultar "Marcar como Concluída" para tipos com processamento especial */}
+                            {(!task.fixed_type || !TASK_TYPES[task.fixed_type as FixedTaskType]?.hasSpecialProcessing) && (
+                              <DropdownMenuItem
+                                onClick={() => onStatusChange(task.id, 'done')}
+                                disabled={task.status === 'done'}
+                              >
+                                Marcar como Concluída
+                              </DropdownMenuItem>
+                            )}
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}

@@ -42,7 +42,6 @@ export interface Task {
   // Novos campos
   fixed_type: string;
   payload: any;
-  list_in_pending: boolean;
   template_id: string | null;
   template_snapshot: any;
   series_id: string | null;
@@ -99,7 +98,6 @@ export interface CreateTaskData {
   approval_description?: string | null;
   fixed_type: string;
   payload?: any;
-  list_in_pending?: boolean;
   template_id?: string | null;
   template_snapshot?: any;
   series_id?: string | null;
@@ -136,11 +134,27 @@ export const useTasks = () => {
   const fetchTasks = async (filterOptions: TaskFilter = {}) => {
     try {
       setLoading(true);
-      
+
+      // Query com JOINs para carregar dados relacionados
       let query = supabase
         .from('tasks')
-        .select('*')
+        .select(`
+          *,
+          assigned_user:profiles!tasks_assigned_to_fkey(id, name, email),
+          created_user:profiles!tasks_created_by_fkey(id, name, email),
+          assigned_department_profile:departments(id, name, color),
+          template:task_templates(id, name, fixed_type)
+        `)
         .order('created_at', { ascending: false });
+
+      // Filtro de visibilidade: usuário pode ver tarefas que:
+      // 1. Foram criadas por ele
+      // 2. Foram atribuídas a ele
+      // 3. Ele está na lista de assigned_users
+      // 4. São do departamento dele (se assigned_department estiver preenchido)
+      // OU é admin/director que vê todas
+
+      console.log('🔍 Fetching tasks for user:', user?.id);
 
       // Aplicar filtros
       if (filterOptions.status && filterOptions.status.length > 0) {
@@ -199,17 +213,15 @@ export const useTasks = () => {
         query = query.eq('template_id', filterOptions.template_id);
       }
 
-      if (filterOptions.only_pending) {
-        // Cast to any to avoid type conflicts with database schema that hasn't been updated yet
-        query = (query as any).eq('list_in_pending', true);
-      }
-
-      const { data, error } = await query;
+      const { data, error} = await query;
 
       if (error) {
+        console.error('❌ Error fetching tasks:', error);
         toast.error('Erro ao buscar tarefas: ' + error.message);
         return;
       }
+
+      console.log(`✅ Fetched ${data?.length || 0} tasks from database`);
 
       // Convert raw task data to Task interface format
       const formattedTasks: Task[] = (data || []).map((task: any) => ({
@@ -217,15 +229,17 @@ export const useTasks = () => {
         workflow_step_name: null,
         fixed_type: task.fixed_type || 'simple_task',
         payload: task.payload || {},
-        list_in_pending: task.list_in_pending || false,
         template_id: task.template_id || null,
         template_snapshot: task.template_snapshot || {},
-        assigned_user: null,
-        created_user: null,
-        assigned_department_profile: null,
-        template: null,
+        // Use joined data from query
+        assigned_user: task.assigned_user || null,
+        created_user: task.created_user || null,
+        assigned_department_profile: task.assigned_department_profile || null,
+        template: task.template || null,
         assigned_users_profiles: [],
       }));
+
+      console.log('📋 Formatted tasks:', formattedTasks.map(t => ({ id: t.id, title: t.title, status: t.status })));
 
       setTasks(formattedTasks);
     } catch (error) {
@@ -238,13 +252,19 @@ export const useTasks = () => {
 
   // Criar nova tarefa
   const createTask = async (taskData: CreateTaskData) => {
+    console.log('🚀 createTask called with data:', taskData);
+
     if (!user) {
+      console.error('❌ User not authenticated');
       toast.error('Usuário não autenticado');
       return false;
     }
 
+    console.log('✅ User authenticated:', user.id);
+
     try {
       const assignmentType = (taskData as any).assignment_type;
+      console.log('📝 Assignment type:', assignmentType);
 
       // Se o tipo de atribuição for "department", buscar todos os usuários do departamento
       // e converter para tipo "anyone" (assigned_users)
@@ -298,10 +318,8 @@ export const useTasks = () => {
           approval_description: taskData.approval_description || null,
           fixed_type: taskData.fixed_type,
           payload: taskData.payload || {},
-          list_in_pending: taskData.list_in_pending || false,
           template_id: taskData.template_id || null,
           template_snapshot: taskData.template_snapshot || {},
-          duplication_type: 'individual_copy',
           parent_task_id: null, // Será atualizado depois
         }));
 
@@ -326,11 +344,7 @@ export const useTasks = () => {
             .update({ parent_task_id: parentTaskId })
             .in('id', taskIds);
 
-          // Atualizar a primeira tarefa como 'original'
-          await supabase
-            .from('tasks')
-            .update({ duplication_type: 'original' })
-            .eq('id', parentTaskId);
+          // Note: duplication_type field removed as it doesn't exist in database
 
           // Converter para formato Task e adicionar ao estado
           const newTasks: Task[] = data.map((task: any) => ({
@@ -338,8 +352,7 @@ export const useTasks = () => {
             workflow_step_name: null,
             fixed_type: task.fixed_type || 'simple_task',
             payload: task.payload || {},
-            list_in_pending: task.list_in_pending || false,
-            template_id: task.template_id || null,
+                template_id: task.template_id || null,
             template_snapshot: task.template_snapshot || {},
             assigned_user: null,
             created_user: null,
@@ -381,12 +394,12 @@ export const useTasks = () => {
         approval_description: taskData.approval_description || null,
         fixed_type: taskData.fixed_type,
         payload: taskData.payload || {},
-        list_in_pending: taskData.list_in_pending || false,
         template_id: taskData.template_id || null,
         template_snapshot: taskData.template_snapshot || {},
-        duplication_type: null,
         parent_task_id: null,
       };
+
+      console.log('💾 Inserting task data:', insertData);
 
       const { data, error } = await supabase
         .from('tasks')
@@ -394,7 +407,10 @@ export const useTasks = () => {
         .select('*')
         .single();
 
+      console.log('📊 Insert result:', { data, error });
+
       if (error) {
+        console.error('❌ Error creating task:', error);
         toast.error('Erro ao criar tarefa: ' + error.message);
         return false;
       }
@@ -405,7 +421,6 @@ export const useTasks = () => {
         workflow_step_name: null,
         fixed_type: (data as any).fixed_type || 'simple_task',
         payload: (data as any).payload || {},
-        list_in_pending: (data as any).list_in_pending || false,
         template_id: (data as any).template_id || null,
         template_snapshot: (data as any).template_snapshot || {},
         assigned_user: null,
@@ -415,11 +430,13 @@ export const useTasks = () => {
         assigned_users_profiles: [],
       };
 
+      console.log('✅ Task created successfully:', taskWithDefaults);
+
       setTasks(prev => [taskWithDefaults, ...prev]);
       toast.success('Tarefa criada com sucesso!');
       return true;
     } catch (error) {
-      console.error('Erro ao criar tarefa:', error);
+      console.error('❌ Unexpected error creating task:', error);
       toast.error('Erro ao criar tarefa');
       return false;
     }
@@ -463,7 +480,6 @@ export const useTasks = () => {
         workflow_step_name: null,
         fixed_type: (data as any).fixed_type || 'simple_task',
         payload: (data as any).payload || {},
-        list_in_pending: (data as any).list_in_pending || false,
         template_id: (data as any).template_id || null,
         template_snapshot: (data as any).template_snapshot || {},
         assigned_user: null,
@@ -539,7 +555,6 @@ export const useTasks = () => {
         workflow_step_name: null,
         fixed_type: task.fixed_type || 'simple_task',
         payload: task.payload || {},
-        list_in_pending: task.list_in_pending || false,
         template_id: task.template_id || null,
         template_snapshot: task.template_snapshot || {},
         assigned_user: null,
@@ -583,7 +598,6 @@ export const useTasks = () => {
         workflow_step_name: null,
         fixed_type: task.fixed_type || 'simple_task',
         payload: task.payload || {},
-        list_in_pending: task.list_in_pending || false,
         template_id: task.template_id || null,
         template_snapshot: task.template_snapshot || {},
         assigned_user: null,

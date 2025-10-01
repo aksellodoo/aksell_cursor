@@ -484,17 +484,6 @@ export const DepartmentFormModal = ({ open, onClose, department }: DepartmentFor
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <Label className="text-sm font-medium">Subpastas</Label>
-                      {department && formData.document_root_enabled && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setShowFolderManagement(true)}
-                        >
-                          <Settings className="h-4 w-4 mr-2" />
-                          Gerenciar Subpastas
-                        </Button>
-                      )}
                     </div>
                     <p className="text-xs text-muted-foreground mb-2">
                       Configure as subpastas padrão para organizar os arquivos
