@@ -21,7 +21,7 @@ import { TaskTypePicker } from '@/components/TaskTypePicker';
 import { TemplatePickerDrawer } from '@/components/TemplatePickerDrawer';
 import { DocumentSelectionModal } from '@/components/DocumentSelectionModal';
 import { RecurrenceSection, type RecurrenceSettings } from '@/components/RecurrenceSection';
-import { Save, Clock, FileText, X, File, ArrowLeft } from 'lucide-react';
+import { Save, Clock, FileText, X, File, ArrowLeft, Plus } from 'lucide-react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
@@ -75,7 +75,9 @@ export const TaskEditorFullscreen: React.FC = () => {
   const [showFileSelection, setShowFileSelection] = useState(false);
   const [selectedFileId, setSelectedFileId] = useState<string>('');
   const [selectedFileName, setSelectedFileName] = useState<string>('');
-  
+  const [selectedAttachments, setSelectedAttachments] = useState<Array<{id: string, name: string}>>([]);
+  const [showAttachmentsSelection, setShowAttachmentsSelection] = useState(false);
+
   const [localRecurrenceSettings, setLocalRecurrenceSettings] = useState<RecurrenceSettings>({
     enabled: false,
     frequency: 'daily',
@@ -827,6 +829,65 @@ export const TaskEditorFullscreen: React.FC = () => {
 
               <Separator />
 
+              {/* Attachments Section */}
+              <div className="space-y-6">
+                <h2 className="text-lg font-semibold">Anexos (Opcional)</h2>
+                <div className="space-y-4">
+                  {selectedAttachments.length > 0 ? (
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {selectedAttachments.map((attachment) => (
+                          <div
+                            key={attachment.id}
+                            className="flex items-center justify-between p-3 border rounded-lg bg-muted/30"
+                          >
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <File className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                              <span className="text-sm truncate">{attachment.name}</span>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedAttachments(prev => prev.filter(a => a.id !== attachment.id));
+                              }}
+                              className="h-8 w-8 p-0 flex-shrink-0"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setShowAttachmentsSelection(true)}
+                        className="w-full"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Adicionar mais arquivos
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowAttachmentsSelection(true)}
+                      className="w-full"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Adicionar arquivos anexos
+                    </Button>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Anexe documentos, imagens ou outros arquivos relevantes para esta tarefa
+                  </p>
+                </div>
+              </div>
+
+              <Separator />
+
               {/* Specific Payload Fields */}
               <div className="space-y-6">
                 <h2 className="text-lg font-semibold">Configurações Específicas</h2>
@@ -898,6 +959,7 @@ export const TaskEditorFullscreen: React.FC = () => {
         }}
       />
 
+      {/* Modal for single file selection (for Approval type) */}
       <DocumentSelectionModal
         open={showFileSelection}
         onOpenChange={setShowFileSelection}
@@ -907,6 +969,22 @@ export const TaskEditorFullscreen: React.FC = () => {
           setValue('payload.file_id', docId);
           setShowFileSelection(false);
         }}
+      />
+
+      {/* Modal for multiple file selection (attachments) */}
+      <DocumentSelectionModal
+        open={showAttachmentsSelection}
+        onOpenChange={setShowAttachmentsSelection}
+        allowMultiple={true}
+        onMultipleDocumentsSelect={(documents) => {
+          setSelectedAttachments(prev => {
+            // Add new documents avoiding duplicates
+            const newDocs = documents.filter(doc => !prev.some(p => p.id === doc.id));
+            return [...prev, ...newDocs];
+          });
+          setShowAttachmentsSelection(false);
+        }}
+        onDocumentSelect={() => {}} // Required but not used in multiple mode
       />
     </FullscreenDialogContent>
   );

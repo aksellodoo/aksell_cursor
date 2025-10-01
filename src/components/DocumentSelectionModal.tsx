@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Search, Eye, EyeOff, FolderOpen, Folder, File, Grid3x3, List,
   Clock, Star, TrendingUp, FileText, Image, FileSpreadsheet,
@@ -46,20 +47,25 @@ interface DocumentSelectionModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onDocumentSelect: (documentId: string, documentName: string) => void;
+  onMultipleDocumentsSelect?: (documents: Array<{id: string, name: string}>) => void;
   selectedDocumentId?: string;
+  allowMultiple?: boolean;
 }
 
 export const DocumentSelectionModal: React.FC<DocumentSelectionModalProps> = ({
   open,
   onOpenChange,
   onDocumentSelect,
-  selectedDocumentId
+  onMultipleDocumentsSelect,
+  selectedDocumentId,
+  allowMultiple = false
 }) => {
   const [selectedNode, setSelectedNode] = useState<DocumentTreeItem | null>(null);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [includeHidden, setIncludeHidden] = useState(false);
   const [tempSelectedDocumentId, setTempSelectedDocumentId] = useState<string>('');
   const [tempSelectedDocumentName, setTempSelectedDocumentName] = useState<string>('');
+  const [tempSelectedDocuments, setTempSelectedDocuments] = useState<Array<{id: string, name: string}>>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [activeTab, setActiveTab] = useState<'browse' | 'recent' | 'favorites' | 'popular'>('browse');
   const [searchQuery, setSearchQuery] = useState('');
@@ -96,6 +102,7 @@ export const DocumentSelectionModal: React.FC<DocumentSelectionModalProps> = ({
     if (open) {
       setTempSelectedDocumentId(selectedDocumentId || '');
       setTempSelectedDocumentName('');
+      setTempSelectedDocuments([]);
       setSearchQuery('');
       setFileTypeFilter('all');
       setStatusFilter('all');
@@ -269,16 +276,38 @@ export const DocumentSelectionModal: React.FC<DocumentSelectionModalProps> = ({
   }, [tree]);
 
   const handleDocumentSelect = useCallback((documentId: string, documentName: string) => {
-    setTempSelectedDocumentId(documentId);
-    setTempSelectedDocumentName(documentName);
-  }, []);
+    if (allowMultiple) {
+      // Toggle selection in multiple mode
+      setTempSelectedDocuments(prev => {
+        const exists = prev.find(doc => doc.id === documentId);
+        if (exists) {
+          // Remove if already selected
+          return prev.filter(doc => doc.id !== documentId);
+        } else {
+          // Add to selection
+          return [...prev, { id: documentId, name: documentName }];
+        }
+      });
+    } else {
+      // Single selection mode
+      setTempSelectedDocumentId(documentId);
+      setTempSelectedDocumentName(documentName);
+    }
+  }, [allowMultiple]);
 
   const handleConfirmSelection = useCallback(() => {
-    if (tempSelectedDocumentId && tempSelectedDocumentName) {
-      onDocumentSelect(tempSelectedDocumentId, tempSelectedDocumentName);
-      onOpenChange(false);
+    if (allowMultiple) {
+      if (tempSelectedDocuments.length > 0 && onMultipleDocumentsSelect) {
+        onMultipleDocumentsSelect(tempSelectedDocuments);
+        onOpenChange(false);
+      }
+    } else {
+      if (tempSelectedDocumentId && tempSelectedDocumentName) {
+        onDocumentSelect(tempSelectedDocumentId, tempSelectedDocumentName);
+        onOpenChange(false);
+      }
     }
-  }, [tempSelectedDocumentId, tempSelectedDocumentName, onDocumentSelect, onOpenChange]);
+  }, [allowMultiple, tempSelectedDocuments, tempSelectedDocumentId, tempSelectedDocumentName, onMultipleDocumentsSelect, onDocumentSelect, onOpenChange]);
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
@@ -312,7 +341,9 @@ export const DocumentSelectionModal: React.FC<DocumentSelectionModalProps> = ({
 
   const renderDocumentCard = (document: DocumentItem, isQuickAccess = false) => {
     const FileIcon = getFileIcon(document.mime_type);
-    const isSelected = tempSelectedDocumentId === document.id;
+    const isSelected = allowMultiple
+      ? tempSelectedDocuments.some(doc => doc.id === document.id)
+      : tempSelectedDocumentId === document.id;
 
     if (viewMode === 'grid') {
       return (
@@ -359,15 +390,25 @@ export const DocumentSelectionModal: React.FC<DocumentSelectionModalProps> = ({
               )}
             </div>
 
-            {isSelected && (
-              <div className="absolute top-2 right-2">
-                <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
-                  <svg className="h-4 w-4 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-              </div>
-            )}
+            <div className="absolute top-2 right-2">
+              {allowMultiple ? (
+                <Checkbox
+                  checked={isSelected}
+                  onCheckedChange={(e) => {
+                    e.stopPropagation();
+                  }}
+                  className="h-5 w-5"
+                />
+              ) : (
+                isSelected && (
+                  <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
+                    <svg className="h-4 w-4 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                )
+              )}
+            </div>
           </div>
         </div>
       );
@@ -395,12 +436,22 @@ export const DocumentSelectionModal: React.FC<DocumentSelectionModalProps> = ({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <span className="font-medium truncate">{document.name}</span>
-              {isSelected && (
-                <div className="h-5 w-5 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-                  <svg className="h-3 w-3 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
+              {allowMultiple ? (
+                <Checkbox
+                  checked={isSelected}
+                  onCheckedChange={(e) => {
+                    e.stopPropagation();
+                  }}
+                  className="h-4 w-4 flex-shrink-0"
+                />
+              ) : (
+                isSelected && (
+                  <div className="h-5 w-5 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+                    <svg className="h-3 w-3 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                )
               )}
             </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -776,11 +827,22 @@ export const DocumentSelectionModal: React.FC<DocumentSelectionModalProps> = ({
           {mode === 'selection' && (
             <DialogFooter className="flex items-center justify-between">
               <div className="flex-1 text-sm text-muted-foreground">
-                {tempSelectedDocumentName && (
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
-                    <span className="truncate">Selecionado: {tempSelectedDocumentName}</span>
-                  </div>
+                {allowMultiple ? (
+                  tempSelectedDocuments.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      <span className="truncate">
+                        {tempSelectedDocuments.length} arquivo{tempSelectedDocuments.length !== 1 ? 's' : ''} selecionado{tempSelectedDocuments.length !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  )
+                ) : (
+                  tempSelectedDocumentName && (
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      <span className="truncate">Selecionado: {tempSelectedDocumentName}</span>
+                    </div>
+                  )
                 )}
               </div>
               <div className="flex gap-2">
@@ -789,9 +851,9 @@ export const DocumentSelectionModal: React.FC<DocumentSelectionModalProps> = ({
                 </Button>
                 <Button
                   onClick={handleConfirmSelection}
-                  disabled={!tempSelectedDocumentId}
+                  disabled={allowMultiple ? tempSelectedDocuments.length === 0 : !tempSelectedDocumentId}
                 >
-                  Selecionar
+                  {allowMultiple ? 'Confirmar Seleção' : 'Selecionar'}
                 </Button>
               </div>
             </DialogFooter>

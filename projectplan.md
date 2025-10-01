@@ -430,3 +430,47 @@
   - Logging detalhado facilita debug futuro
 
 - Preview local atualizado e funcionando ✓
+
+#### Campo de Anexos para Todos os Tipos de Tarefas com Seleção Múltipla - 01/10/2025 18:40
+- ✅ **Requisito do usuário:**
+  - Campo de anexos visível para TODOS os tipos de tarefas (não apenas Aprovação)
+  - Permitir seleção de múltiplos arquivos
+  - Manter funcionalidade de importação integrada
+
+- ✅ **DocumentSelectionModal atualizado:**
+  - Adicionado prop `allowMultiple?: boolean` (default: false)
+  - Adicionado prop `onMultipleDocumentsSelect?: (documents: Array<{id, name}>) => void`
+  - Estado `tempSelectedDocuments` para gerenciar seleção múltipla
+  - Lógica `handleDocumentSelect` adaptada: toggle em modo múltiplo, replace em modo único
+  - Checkboxes adicionados em grid view e list view quando `allowMultiple=true`
+  - Footer atualizado: mostra contador "X arquivos selecionados" e botão "Confirmar Seleção"
+  - Validação adaptada: `disabled` baseado em array length quando múltiplo
+
+- ✅ **TaskEditorFullscreen atualizado:**
+  - Novos estados: `selectedAttachments: Array<{id, name}>` e `showAttachmentsSelection`
+  - Nova seção "Anexos (Opcional)" adicionada após "Informações Básicas"
+  - UI mostra grid de anexos com botão X para remover individualmente
+  - Botão "Adicionar arquivos anexos" / "Adicionar mais arquivos"
+  - Segundo `DocumentSelectionModal` com `allowMultiple={true}` para anexos
+  - Evita duplicatas ao adicionar novos anexos
+  - Seção disponível para TODOS os tipos de tarefa
+
+- ✅ **Estrutura do formulário:**
+  ```
+  1. Informações Básicas
+  2. Anexos (Opcional) ← NOVO - para TODOS os tipos
+  3. Configurações Específicas (campos por tipo)
+  4. Recorrência
+  ```
+
+- ✅ **Comportamento:**
+  - Tarefas de Aprovação: campo obrigatório "Origem do Dado" (pode ser arquivo) + seção de anexos opcional
+  - Outros tipos de tarefa: apenas seção de anexos opcional (0 ou mais arquivos)
+  - Modal com `allowMultiple=false`: seleção única com radio visual
+  - Modal com `allowMultiple=true`: seleção múltipla com checkboxes
+
+- ✅ **Arquivos modificados:**
+  - `src/components/DocumentSelectionModal.tsx` - Suporte a seleção múltipla
+  - `src/pages/TaskEditorFullscreen.tsx` - Nova seção de anexos e lógica
+
+- Preview local atualizado e funcionando ✓
