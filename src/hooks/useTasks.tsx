@@ -244,6 +244,120 @@ export const useTasks = () => {
     }
 
     try {
+      const assignmentType = (taskData as any).assignment_type;
+
+      // Se o tipo de atribuição for "department", buscar todos os usuários do departamento
+      // e converter para tipo "anyone" (assigned_users)
+      if (assignmentType === 'department' && taskData.assigned_department) {
+        const { data: departmentUsers, error: deptError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('department_id', taskData.assigned_department)
+          .eq('status', 'active');
+
+        if (deptError) {
+          toast.error('Erro ao buscar usuários do departamento: ' + deptError.message);
+          return false;
+        }
+
+        if (!departmentUsers || departmentUsers.length === 0) {
+          toast.error('Nenhum usuário ativo encontrado neste departamento');
+          return false;
+        }
+
+        // Converter para array de IDs
+        const userIds = departmentUsers.map(u => u.id);
+
+        // Criar tarefa tipo "anyone" com os usuários do departamento
+        taskData.assigned_users = userIds;
+        taskData.assigned_department = null; // Limpar o departamento
+      }
+
+      // Se o tipo de atribuição for "all", criar uma tarefa para cada usuário
+      if (assignmentType === 'all' && taskData.assigned_users && taskData.assigned_users.length > 0) {
+        const tasksToInsert = taskData.assigned_users.map(userId => ({
+          title: taskData.title,
+          description: taskData.description || null,
+          status: taskData.status || 'todo',
+          priority: taskData.priority || 'P3',
+          assigned_to: userId, // Atribuir individualmente
+          assigned_department: null,
+          assigned_users: null, // Não usar array para tipo "all"
+          created_by: user.id,
+          due_date: taskData.due_date || null,
+          expected_completion_at: taskData.expected_completion_at || null,
+          deadline_at: taskData.deadline_at || null,
+          estimated_hours: taskData.estimated_hours || null,
+          tags: taskData.tags || null,
+          record_type: taskData.record_type || null,
+          record_id: taskData.record_id || null,
+          workflow_id: taskData.workflow_id || null,
+          workflow_step_id: taskData.workflow_step_id || null,
+          task_type_id: taskData.task_type_id || null,
+          approval_title: taskData.approval_title || null,
+          approval_description: taskData.approval_description || null,
+          fixed_type: taskData.fixed_type,
+          payload: taskData.payload || {},
+          list_in_pending: taskData.list_in_pending || false,
+          template_id: taskData.template_id || null,
+          template_snapshot: taskData.template_snapshot || {},
+          duplication_type: 'individual_copy',
+          parent_task_id: null, // Será atualizado depois
+        }));
+
+        // Inserir todas as tarefas
+        const { data, error } = await supabase
+          .from('tasks')
+          .insert(tasksToInsert)
+          .select('*');
+
+        if (error) {
+          toast.error('Erro ao criar tarefas: ' + error.message);
+          return false;
+        }
+
+        if (data && data.length > 0) {
+          // Atualizar todas as tarefas com o ID da primeira como parent_task_id
+          const parentTaskId = data[0].id;
+          const taskIds = data.map(t => t.id);
+
+          await supabase
+            .from('tasks')
+            .update({ parent_task_id: parentTaskId })
+            .in('id', taskIds);
+
+          // Atualizar a primeira tarefa como 'original'
+          await supabase
+            .from('tasks')
+            .update({ duplication_type: 'original' })
+            .eq('id', parentTaskId);
+
+          // Converter para formato Task e adicionar ao estado
+          const newTasks: Task[] = data.map((task: any) => ({
+            ...task,
+            workflow_step_name: null,
+            fixed_type: task.fixed_type || 'simple_task',
+            payload: task.payload || {},
+            list_in_pending: task.list_in_pending || false,
+            template_id: task.template_id || null,
+            template_snapshot: task.template_snapshot || {},
+            assigned_user: null,
+            created_user: null,
+            assigned_department_profile: null,
+            template: null,
+            assigned_users_profiles: [],
+            parent_task_id: parentTaskId,
+          }));
+
+          setTasks(prev => [...newTasks, ...prev]);
+          toast.success(`${data.length} tarefas criadas com sucesso! (uma para cada usuário)`);
+          return true;
+        }
+
+        return false;
+      }
+
+      // Lógica padrão para outros tipos de atribuição
       const insertData: any = {
         title: taskData.title,
         description: taskData.description || null,
@@ -270,6 +384,8 @@ export const useTasks = () => {
         list_in_pending: taskData.list_in_pending || false,
         template_id: taskData.template_id || null,
         template_snapshot: taskData.template_snapshot || {},
+        duplication_type: null,
+        parent_task_id: null,
       };
 
       const { data, error } = await supabase

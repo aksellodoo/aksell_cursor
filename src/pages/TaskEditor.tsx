@@ -29,7 +29,7 @@ const taskFormSchema = z.object({
   title: z.string().min(1, 'Título é obrigatório'),
   description: z.string().optional(),
   priority: z.enum(['P1', 'P2', 'P3', 'P4']),
-  assignment_type: z.enum(['individual', 'multiple', 'department']),
+  assignment_type: z.enum(['individual', 'anyone', 'all', 'department']),
   assigned_to: z.string().optional(),
   assigned_users: z.array(z.string()).optional(),
   assigned_department: z.string().optional(),
@@ -765,7 +765,8 @@ export const TaskEditor: React.FC = () => {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="individual">Individual</SelectItem>
-                        <SelectItem value="multiple">Múltiplo</SelectItem>
+                        <SelectItem value="anyone">Qualquer um</SelectItem>
+                        <SelectItem value="all">Todos</SelectItem>
                         <SelectItem value="department">Departamento</SelectItem>
                       </SelectContent>
                     </Select>
@@ -795,6 +796,82 @@ export const TaskEditor: React.FC = () => {
                           ))}
                         </SelectContent>
                       </Select>
+                    )}
+                  />
+                </div>
+              )}
+
+              {watchedValues.assignment_type === 'anyone' && (
+                <div className="space-y-2">
+                  <Label>Selecionar Usuários</Label>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Todos os usuários selecionados terão acesso à mesma tarefa
+                  </p>
+                  <Controller
+                    name="assigned_users"
+                    control={control}
+                    render={({ field }) => (
+                      <div className="space-y-2 max-h-40 overflow-y-auto border rounded p-3">
+                        {profiles.map((profile) => (
+                          <div key={profile.id} className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id={`user-anyone-${profile.id}`}
+                              checked={field.value?.includes(profile.id) || false}
+                              onChange={(e) => {
+                                const currentUsers = field.value || [];
+                                if (e.target.checked) {
+                                  field.onChange([...currentUsers, profile.id]);
+                                } else {
+                                  field.onChange(currentUsers.filter((id: string) => id !== profile.id));
+                                }
+                              }}
+                              className="rounded border-gray-300"
+                            />
+                            <Label htmlFor={`user-anyone-${profile.id}`} className="text-sm font-normal cursor-pointer">
+                              {profile.name}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  />
+                </div>
+              )}
+
+              {watchedValues.assignment_type === 'all' && (
+                <div className="space-y-2">
+                  <Label>Selecionar Usuários</Label>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Cada usuário selecionado receberá uma cópia independente da tarefa
+                  </p>
+                  <Controller
+                    name="assigned_users"
+                    control={control}
+                    render={({ field }) => (
+                      <div className="space-y-2 max-h-40 overflow-y-auto border rounded p-3">
+                        {profiles.map((profile) => (
+                          <div key={profile.id} className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id={`user-all-${profile.id}`}
+                              checked={field.value?.includes(profile.id) || false}
+                              onChange={(e) => {
+                                const currentUsers = field.value || [];
+                                if (e.target.checked) {
+                                  field.onChange([...currentUsers, profile.id]);
+                                } else {
+                                  field.onChange(currentUsers.filter((id: string) => id !== profile.id));
+                                }
+                              }}
+                              className="rounded border-gray-300"
+                            />
+                            <Label htmlFor={`user-all-${profile.id}`} className="text-sm font-normal cursor-pointer">
+                              {profile.name}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
                     )}
                   />
                 </div>
