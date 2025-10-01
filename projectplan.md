@@ -14,6 +14,49 @@
 
 ### 2025-10-01
 
+#### Correção Edge Function + Expansão de Ícones (25 → 68 ícones)
+- ✅ **Correção Edge Function suggest-department-icon:**
+  - Removido import relativo problemático de `errorUtils.ts`
+  - Adicionada função `getErrorMessage()` inline na Edge Function
+  - Implementado logging detalhado para debug:
+    - Log de headers da requisição
+    - Log do body completo
+    - Log de status do OPENAI_API_KEY
+    - Log detalhado de erros com stack trace
+  - **Problema anterior:** Edge Function falhava ao ser invocada (erro "failed edge function")
+  - **Solução:** Import absoluto estava causando erro no Deno runtime
+  - Arquivo: `supabase/functions/suggest-department-icon/index.ts`
+
+- ✅ **Expansão de Ícones (25 → 68 ícones):**
+  - **Novos ícones adicionados (43 novos):**
+    - Básicos: Home
+    - Pessoas/RH: UsersRound, UserCheck, UserPlus, Contact
+    - Financeiro: CreditCard, Coins, DollarSign, Receipt
+    - Jurídico/Segurança: ShieldCheck, ShieldAlert, Lock, Key
+    - TI/Tecnologia: Database, Settings, Cog, Zap
+    - Marketing/Comunicação: Presentation, Radio, Rss, Video, Mic
+    - Vendas/Comercial: Target, TrendingUp
+    - Operações/Logística: Tool
+    - Qualidade/P&D: Award
+    - Documentos: FileText, Files, FolderOpen, Clipboard, Notebook, FileCheck, BookOpen, Archive, Inbox
+    - Análise: BarChart, LineChart, PieChart, Activity
+    - Outros: MapPin, Flag
+  - **Categorização organizada:** 12 categorias para facilitar seleção
+  - Arquivo: `src/utils/departmentIcons.ts` (linhas 1-240)
+
+- ✅ **Atualização UI do Modal:**
+  - Grid expandido de 5x5 para **7 colunas** (comporta 68 ícones)
+  - Popover width aumentado: 320px → 420px
+  - Max-height do grid: 300px → 400px
+  - Título atualizado: "Selecione um ícone (68 disponíveis)"
+  - Arquivo: `src/components/DepartmentFormModal.tsx` (linha 336-339)
+
+- ✅ **System Prompt da IA atualizado:**
+  - Prompt reduzido e mais organizado (categorias numeradas)
+  - 68 ícones listados por categoria
+  - Instruções mais claras sobre case-sensitivity
+  - Arquivo: `supabase/functions/suggest-department-icon/index.ts` (linhas 84-111)
+
 #### Campo de Ícone para Departamentos com Sugestão por IA (OpenAI GPT-4o)
 - ✅ **Migration Supabase:**
   - Adicionada coluna `icon` (TEXT) na tabela `departments`

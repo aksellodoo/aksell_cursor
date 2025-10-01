@@ -1,36 +1,79 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { getErrorMessage } from '../_shared/errorUtils.ts';
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+
+// Utility function to safely extract error messages
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (typeof error === 'string') {
+    return error;
+  }
+  if (error && typeof error === 'object' && 'message' in error) {
+    return String((error as any).message);
+  }
+  return String(error);
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Lista de ícones disponíveis do Lucide React
+// Lista de ícones disponíveis do Lucide React (68 ícones)
 const AVAILABLE_ICONS = [
-  'Building2', 'Users', 'Calculator', 'Banknote', 'Scale',
-  'Cpu', 'Server', 'Megaphone', 'ShoppingCart', 'Package',
-  'Truck', 'BadgeCheck', 'Briefcase', 'Factory', 'Warehouse',
-  'Store', 'GraduationCap', 'Beaker', 'Heart', 'Wrench',
-  'Hammer', 'Shield', 'Phone', 'Mail', 'Globe'
+  // Básicos
+  'Building2', 'Home', 'Briefcase',
+  // Pessoas/RH
+  'Users', 'UsersRound', 'UserCheck', 'UserPlus', 'Contact',
+  // Financeiro
+  'Calculator', 'Banknote', 'CreditCard', 'Coins', 'DollarSign', 'Receipt',
+  // Jurídico/Segurança
+  'Scale', 'Shield', 'ShieldCheck', 'ShieldAlert', 'Lock', 'Key',
+  // TI/Tecnologia
+  'Cpu', 'Server', 'Database', 'Settings', 'Cog', 'Zap',
+  // Marketing/Comunicação
+  'Megaphone', 'Presentation', 'Radio', 'Rss', 'Video', 'Mic',
+  // Vendas/Comercial
+  'ShoppingCart', 'Store', 'Target', 'TrendingUp',
+  // Operações/Logística
+  'Package', 'Truck', 'Warehouse', 'Factory', 'Tool', 'Wrench', 'Hammer',
+  // Qualidade/P&D
+  'BadgeCheck', 'Beaker', 'GraduationCap', 'Award',
+  // Documentos
+  'FileText', 'Files', 'FolderOpen', 'Clipboard', 'Notebook', 'FileCheck', 'BookOpen', 'Archive', 'Inbox',
+  // Análise
+  'BarChart', 'LineChart', 'PieChart', 'Activity',
+  // Comunicação
+  'Phone', 'Mail',
+  // Outros
+  'Heart', 'Globe', 'MapPin', 'Flag'
 ];
 
 serve(async (req) => {
-  console.log('Suggest Department Icon function called');
+  console.log('=== Suggest Department Icon function called ===');
+  console.log('Method:', req.method);
+  console.log('Headers:', Object.fromEntries(req.headers.entries()));
 
   if (req.method === 'OPTIONS') {
+    console.log('Returning CORS preflight response');
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    console.log('OpenAI API Key configured:', !!openAIApiKey);
+
     if (!openAIApiKey) {
+      console.error('ERROR: OpenAI API key not configured in environment');
       throw new Error('OpenAI API key not configured');
     }
 
-    const { departmentName } = await req.json();
+    const requestBody = await req.json();
+    console.log('Request body:', requestBody);
+
+    const { departmentName } = requestBody;
 
     if (!departmentName || departmentName.trim() === '') {
       throw new Error('Department name is required');
@@ -39,46 +82,33 @@ serve(async (req) => {
     console.log('Suggesting icon for department:', departmentName);
 
     const systemPrompt = `Você é um especialista em identificação de ícones apropriados para departamentos corporativos.
-Sua tarefa é sugerir o ícone mais adequado da biblioteca Lucide React baseado no nome do departamento fornecido.
+Sua tarefa é sugerir o ícone mais adequado da biblioteca Lucide React (68 ícones disponíveis) baseado no nome do departamento fornecido.
 
-Ícones disponíveis e seus usos típicos:
-- Building2: Departamentos gerais, administrativos
-- Users: RH, Recursos Humanos, Pessoal, People
-- Calculator: Contabilidade, Controladoria
-- Banknote: Financeiro, Fiscal, Tesouraria
-- Scale: Jurídico, Legal, Compliance
-- Cpu: TI, Tecnologia, Sistemas, Desenvolvimento
-- Server: Infraestrutura, Data Center
-- Megaphone: Marketing, Comunicação
-- ShoppingCart: Vendas, Comercial
-- Package: Compras, Suprimentos, Procurement
-- Truck: Logística, Expedição, Transporte
-- BadgeCheck: Qualidade, QA, QC
-- Briefcase: Diretoria, Executivo, Board
-- Factory: Produção, Manufatura
-- Warehouse: Armazém, Estoque
-- Store: Loja, Varejo
-- GraduationCap: Treinamento, Educação
-- Beaker: Pesquisa, Laboratório, P&D
-- Heart: Saúde, Bem-estar
-- Wrench: Manutenção, Facilities
-- Hammer: Obras, Construção
-- Shield: Segurança, Security
-- Phone: Suporte, Atendimento
-- Mail: Correspondência, Comunicação interna
-- Globe: Internacional, Global
+CATEGORIAS DE ÍCONES:
+1. BÁSICOS: Building2 (geral), Home (matriz), Briefcase (executivo)
+2. PESSOAS/RH: Users, UsersRound (equipe), UserCheck (aprovação), UserPlus (recrutamento), Contact
+3. FINANCEIRO: Calculator (contábil), Banknote (fiscal), CreditCard (pagamentos), Coins (tesouraria), DollarSign, Receipt
+4. JURÍDICO/SEGURANÇA: Scale (jurídico), Shield, ShieldCheck (compliance), ShieldAlert (auditoria), Lock, Key
+5. TI/TECH: Cpu, Server (infra), Database (BI/dados), Settings, Cog, Zap (automação)
+6. MARKETING/COMUNICAÇÃO: Megaphone, Presentation, Radio, Rss, Video, Mic
+7. VENDAS/COMERCIAL: ShoppingCart, Store (varejo), Target (metas), TrendingUp
+8. OPERAÇÕES/LOGÍSTICA: Package (compras), Truck (logística), Warehouse, Factory (produção), Tool, Wrench (manutenção), Hammer (obras)
+9. QUALIDADE/P&D: BadgeCheck (QA), Beaker (pesquisa), GraduationCap (treinamento), Award
+10. DOCUMENTOS: FileText, Files, FolderOpen, Clipboard, Notebook, FileCheck, BookOpen, Archive, Inbox
+11. ANÁLISE: BarChart, LineChart, PieChart, Activity
+12. OUTROS: Phone, Mail, Heart (saúde), Globe (internacional), MapPin (filiais), Flag
 
-Responda EXCLUSIVAMENTE com um JSON válido no formato:
+Responda EXCLUSIVAMENTE com JSON válido:
 {
-  "icon": "NomeDoIcone",
+  "icon": "NomeExatoDoIcone",
   "confidence": 0.95,
-  "reasoning": "Explicação breve da escolha"
+  "reasoning": "Breve explicação (1 frase)"
 }
 
-IMPORTANTE:
-- icon: Deve ser exatamente um dos nomes da lista acima
-- confidence: Número entre 0.1 e 1.0 indicando confiança na sugestão
-- reasoning: Explicação curta (1 frase) do porquê dessa escolha`;
+REGRAS:
+- icon: Deve ser EXATAMENTE um dos 68 ícones listados acima (case-sensitive)
+- confidence: 0.1 a 1.0
+- reasoning: Máximo 1 frase explicando a escolha`;
 
     const userPrompt = `Sugira o ícone mais adequado para este departamento:
 
@@ -146,14 +176,23 @@ Analise o nome e sugira o ícone que melhor representa este departamento.`;
     }
 
   } catch (error) {
-    console.error('Error in suggest-department-icon function:', error);
-    return new Response(JSON.stringify({
+    console.error('=== ERROR in suggest-department-icon function ===');
+    console.error('Error type:', typeof error);
+    console.error('Error:', error);
+    console.error('Error message:', getErrorMessage(error));
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+
+    const errorResponse = {
       error: getErrorMessage(error),
       icon: 'Building2',
       confidence: 0,
       reasoning: 'Erro durante o processamento',
       tokensUsed: 0
-    }), {
+    };
+
+    console.error('Returning error response:', errorResponse);
+
+    return new Response(JSON.stringify(errorResponse), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
