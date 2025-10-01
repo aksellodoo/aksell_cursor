@@ -146,12 +146,20 @@ export const ReviewApprovalStep: React.FC = () => {
     setIsProcessing(true);
     console.log('🔄 Setting isProcessing to true');
 
-    // Obter parâmetros da URL
+    // Obter IDs do contexto do wizard (prioridade) ou da URL (fallback)
     const urlParams = new URLSearchParams(window.location.search);
-    const folderId = urlParams.get('folder') || '';
-    const departmentId = urlParams.get('department') || '';
+    const folderId = wizardData.folderId || urlParams.get('folder') || '';
+    const departmentId = wizardData.departmentId || urlParams.get('department') || '';
 
-    console.log('🗂️ URL params:', { folderId, departmentId });
+    console.log('🗂️ IDs obtained - Context:', {
+      contextDepartmentId: wizardData.departmentId,
+      contextFolderId: wizardData.folderId
+    });
+    console.log('🗂️ IDs obtained - URL:', {
+      urlDepartmentId: urlParams.get('department'),
+      urlFolderId: urlParams.get('folder')
+    });
+    console.log('🗂️ Final IDs used:', { folderId, departmentId });
 
     // Validar se há departmentId (folderId pode ser vazio para pasta principal)
     if (!departmentId) {

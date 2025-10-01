@@ -360,3 +360,73 @@
   - Tooltip explica o motivo do desabilitamento
 
 - Preview local atualizado e funcionando ✓
+
+#### Correção do Erro "ID do departamento não encontrado" no Wizard de Importação - 01/10/2025 17:35
+- ✅ **Problema identificado:**
+  - Ao importar arquivo dentro do DocumentSelectionModal (selecionando departamento → clicar em Importar)
+  - Wizard completava todos os steps mas falhava ao final com erro "ID do departamento não encontrado"
+  - **Causa raiz:** ImportWizardProvider recebia props `initialDepartmentId` e `initialFolderId` mas não as aceitava/usava
+  - ReviewApprovalStep e FileUploadStep buscavam IDs exclusivamente dos **parâmetros da URL**
+  - Como modal não navega para nova rota, parâmetros da URL estavam vazios
+
+- ✅ **Solução implementada:**
+
+  **1. ImportWizard.tsx:**
+  - Adicionado `initialDepartmentId?: string` e `initialFolderId?: string` à interface `ImportWizardProviderProps`
+  - Provider agora aceita essas props e as usa como valores padrão
+  - Adicionado campos `departmentId` e `folderId` ao `wizardData` inicial:
+    ```typescript
+    departmentId: initialDepartmentId,
+    folderId: initialFolderId
+    ```
+  - Adicionado campos `departmentId?: string` e `folderId?: string` à interface `ImportWizardContextType['wizardData']`
+  - IDs agora disponíveis no contexto para todos os steps
+
+  **2. ReviewApprovalStep.tsx:**
+  - Alterada lógica de obtenção de IDs para priorizar contexto sobre URL:
+    ```typescript
+    const folderId = wizardData.folderId || urlParams.get('folder') || '';
+    const departmentId = wizardData.departmentId || urlParams.get('department') || '';
+    ```
+  - Adicionado logging detalhado para debug:
+    - IDs do contexto
+    - IDs da URL
+    - IDs finais usados
+  - Mantida compatibilidade com tela de gestão (fallback para URL)
+
+  **3. FileUploadStep.tsx:**
+  - Aplicada mesma lógica de prioridade (contexto → URL → vazio) em duas localizações:
+    - Função `checkForDuplicates()` (linha 154)
+    - Função `handleQuickFinish()` (linha 403-404)
+  - Adicionado logging para debug
+  - Consistência entre todos os steps do wizard
+
+- ✅ **Comportamento corrigido:**
+  - **No DocumentSelectionModal:**
+    1. Usuário seleciona departamento/pasta
+    2. Clica em "Importar Arquivo"
+    3. ImportWizardProvider recebe `initialDepartmentId` e `initialFolderId` do selectedNode
+    4. IDs armazenados no wizardData do contexto
+    5. Todos os steps acessam IDs via `wizardData.departmentId` e `wizardData.folderId`
+    6. Ao finalizar wizard, evento `startProcessing` dispara com IDs corretos
+    7. Importação completa com sucesso ✅
+
+  - **Na tela de Gestão de Documentos:**
+    1. Usuário navega para `/gestao/documentos/importar?department=X&folder=Y`
+    2. ImportWizardProvider não recebe props (valores vazios)
+    3. Steps usam fallback para URL params
+    4. Importação funciona normalmente ✅
+
+- ✅ **Arquivos modificados:**
+  - `src/components/document-import/ImportWizard.tsx` (linhas 85-89, 108-116, 70-72)
+  - `src/components/document-import/ReviewApprovalStep.tsx` (linhas 149-162)
+  - `src/components/document-import/FileUploadStep.tsx` (linhas 152-154, 401-411)
+
+- ✅ **Vantagens da solução:**
+  - Wizard funciona tanto no modal quanto na tela standalone
+  - IDs preservados do contexto de seleção do modal
+  - Retrocompatível com fluxo existente via URL
+  - Código defensivo com múltiplos fallbacks
+  - Logging detalhado facilita debug futuro
+
+- Preview local atualizado e funcionando ✓

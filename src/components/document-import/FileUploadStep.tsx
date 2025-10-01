@@ -147,11 +147,12 @@ export const FileUploadStep: React.FC = () => {
   // Check for duplicate files globally and categorize them
   const checkForDuplicates = async (files: File[]) => {
     setIsCheckingDuplicates(true);
-    
+
     try {
+      // Obter folderId do contexto do wizard (prioridade) ou da URL (fallback)
       const urlParams = new URLSearchParams(window.location.search);
-      const folderId = urlParams.get('folderId') || urlParams.get('folder') || '';
-      
+      const folderId = wizardData.folderId || urlParams.get('folderId') || urlParams.get('folder') || '';
+
       if (!folderId) {
         return { duplicates: [], validFiles: files };
       }
@@ -398,10 +399,17 @@ export const FileUploadStep: React.FC = () => {
       selectedApprovers: []
     };
 
-    // Obter parâmetros da URL
+    // Obter IDs do contexto do wizard (prioridade) ou da URL (fallback)
     const urlParams = new URLSearchParams(window.location.search);
-    const folderId = urlParams.get('folder') || '';
-    const departmentId = urlParams.get('department') || '';
+    const folderId = wizardData.folderId || urlParams.get('folder') || '';
+    const departmentId = wizardData.departmentId || urlParams.get('department') || '';
+
+    console.log('🗂️ FileUploadStep - IDs used:', {
+      contextDepartmentId: wizardData.departmentId,
+      contextFolderId: wizardData.folderId,
+      finalDepartmentId: departmentId,
+      finalFolderId: folderId
+    });
 
     // Disparar evento customizado para abrir modal de processamento
     const event = new CustomEvent('startProcessing', {

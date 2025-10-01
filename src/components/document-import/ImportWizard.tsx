@@ -67,6 +67,9 @@ interface ImportWizardContextType {
     autoModeOcrFiles?: string[];
     extractedTexts?: { [fileName: string]: string };
     pdfAnalyses?: { [fileName: string]: any };
+    // Department and folder IDs (for modal context)
+    departmentId?: string;
+    folderId?: string;
   };
   updateWizardData: (data: Partial<ImportWizardContextType['wizardData']>) => void;
   resetFromStep: (stepIndex: number) => void;
@@ -84,9 +87,15 @@ export const useImportWizard = () => {
 
 interface ImportWizardProviderProps {
   children: ReactNode;
+  initialDepartmentId?: string;
+  initialFolderId?: string;
 }
 
-export const ImportWizardProvider: React.FC<ImportWizardProviderProps> = ({ children }) => {
+export const ImportWizardProvider: React.FC<ImportWizardProviderProps> = ({
+  children,
+  initialDepartmentId = '',
+  initialFolderId = ''
+}) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [originalStep, setOriginalStep] = useState<number | null>(null);
   const [isReviewing, setIsReviewing] = useState(false);
@@ -98,13 +107,15 @@ export const ImportWizardProvider: React.FC<ImportWizardProviderProps> = ({ chil
     { id: 'approval', title: 'Status Inicial', description: 'Status do documento', completed: false },
     { id: 'review-approval', title: 'Revisão ou Aprovação', description: 'Defina o processo', completed: false }
   ]);
-  
+
   const [wizardData, setWizardData] = useState({
     fileQuantity: null as 'single' | 'multiple' | null,
     fileType: null as 'images' | 'pdf' | 'office' | 'others' | null,
     files: [] as File[],
     showProcessing: false,
-    documentStatus: 'aprovado' as 'aprovado' | 'pendente' | 'rejeitado' | 'obsoleto'
+    documentStatus: 'aprovado' as 'aprovado' | 'pendente' | 'rejeitado' | 'obsoleto',
+    departmentId: initialDepartmentId,
+    folderId: initialFolderId
   });
 
   const setStepCompleted = (stepIndex: number, completed: boolean) => {
