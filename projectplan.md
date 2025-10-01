@@ -211,3 +211,35 @@
   - Dados aparecem instantaneamente ou mostram empty state
   - UX mais rápida e sem travamentos
   - **Problema resolvido definitivamente - 100% sem "Carregando..."**
+
+#### Melhorias de UI na Gestão de Documentos - 01/10/2025 15:51
+- ✅ **Aplicação de Cores e Ícones dos Departamentos nos Cards:**
+  - **Modificado `useDocumentTree.tsx`:**
+    - Agora busca também o campo `icon` dos departamentos do banco de dados
+    - Ícone é propagado para departamentos e suas pastas filhas
+  - **Atualizado Interface `DocumentTreeItem`:**
+    - Adicionada propriedade opcional `icon?: string`
+  - **Aprimorado `FolderCard.tsx` com design visual melhorado:**
+    - **Ícones corretos:** Exibe o ícone escolhido no cadastro do departamento (não mais ícone genérico)
+    - **Cores aplicadas:** Usa a cor do departamento em múltiplos elementos:
+      - Borda lateral esquerda colorida (accent bar de 4px)
+      - Gradiente sutil de fundo com a cor do departamento (opacidade 5%)
+      - Ícone colorido com a cor do departamento
+      - Título do card na cor do departamento
+      - Background do container do ícone com cor do departamento (15% opacidade)
+    - **Herança de cor/ícone:** Pastas filhas herdam cor e ícone do departamento pai
+    - **Suporte para ambos os modos:** Grid (default) e Compact
+    - **Design glassmorphism:** Cards com efeito de vidro translúcido
+  - **Atualizado `DocumentManagement.tsx`:**
+    - Passa propriedades `color` e `icon` para todos os `FolderCard`
+    - Aplicado tanto em cards de departamentos quanto de subpastas
+  - **Resultado visual:**
+    - Cards de departamentos agora visualmente distintos por cor
+    - Fácil identificação visual através de cores e ícones personalizados
+    - UI mais moderna e profissional
+    - Consistência visual entre cadastro de departamento e gestão de documentos
+  - Arquivos modificados:
+    - `src/hooks/useDocumentTree.tsx` - Busca campo icon
+    - `src/pages/DocumentManagement.tsx` - Interface + passagem de props
+    - `src/components/FolderCard.tsx` - Design visual aprimorado
+  - Preview local atualizado e funcionando ✓

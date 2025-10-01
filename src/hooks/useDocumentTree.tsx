@@ -24,9 +24,10 @@ export const useDocumentTree = (options: UseDocumentTreeOptions = {}) => {
       const { data: departments, error: deptError } = await supabase
         .from('departments')
         .select(`
-          id, 
-          name, 
-          color
+          id,
+          name,
+          color,
+          icon
         `)
         .order('name');
 
@@ -83,6 +84,7 @@ export const useDocumentTree = (options: UseDocumentTreeOptions = {}) => {
           department_id: dept.id,
           doc_count: totalDocCount,
           color: dept.color || generateColorFromName(dept.name),
+          icon: dept.icon,
           children: []
         };
 
@@ -98,6 +100,7 @@ export const useDocumentTree = (options: UseDocumentTreeOptions = {}) => {
               department_id: dept.id,
               parent_id: folder.parent_folder_id,
               color: dept.color || generateColorFromName(dept.name),
+              icon: dept.icon,
               doc_count: folder.folder_document_counts?.[0]?.doc_count || 0,
               children: buildFolderTree(folder.id, level + 1),
               has_custom_acl: false // TODO: Check for custom ACL

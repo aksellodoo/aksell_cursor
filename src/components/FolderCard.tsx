@@ -3,7 +3,7 @@ import { Folder, FolderOpen, Lock, Archive, EyeOff, FileText } from 'lucide-reac
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { getDepartmentIcon } from '@/utils/departmentIcons';
+import { getDepartmentIcon, getIconComponent } from '@/utils/departmentIcons';
 
 interface FolderCardProps {
   folder: {
@@ -15,6 +15,8 @@ interface FolderCardProps {
     documentCount?: number;
     lastModified?: string;
     hasSubfolders?: boolean;
+    color?: string;
+    icon?: string;
   };
   onClick: () => void;
   className?: string;
@@ -28,9 +30,15 @@ export const FolderCard: React.FC<FolderCardProps> = ({
   variant = 'default'
 }) => {
   const getDepartmentIconComponent = () => {
-    if (folder.type === 'department' && folder.department) {
-      const IconComponent = getDepartmentIcon(folder.department);
-      return <IconComponent className="h-8 w-8 text-primary" />;
+    if (folder.type === 'department') {
+      // Use icon from department if available, otherwise fallback to name-based icon
+      if (folder.icon) {
+        const IconComponent = getIconComponent(folder.icon);
+        return <IconComponent className="h-8 w-8" style={{ color: folder.color || 'currentColor' }} />;
+      } else if (folder.department) {
+        const IconComponent = getDepartmentIcon(folder.department);
+        return <IconComponent className="h-8 w-8" style={{ color: folder.color || 'currentColor' }} />;
+      }
     }
     return null;
   };
@@ -40,15 +48,21 @@ export const FolderCard: React.FC<FolderCardProps> = ({
       return getDepartmentIconComponent();
     }
 
+    // For folders, also use department icon if available
+    if (folder.icon) {
+      const IconComponent = getIconComponent(folder.icon);
+      return <IconComponent className="h-8 w-8" style={{ color: folder.color || 'currentColor' }} />;
+    }
+
     switch (folder.status) {
       case 'archived':
         return <Archive className="h-8 w-8 text-muted-foreground" />;
       case 'hidden':
         return <EyeOff className="h-8 w-8 text-muted-foreground" />;
       default:
-        return folder.hasSubfolders ? 
-          <FolderOpen className="h-8 w-8 text-primary" /> : 
-          <Folder className="h-8 w-8 text-primary" />;
+        return folder.hasSubfolders ?
+          <FolderOpen className="h-8 w-8" style={{ color: folder.color || 'currentColor' }} /> :
+          <Folder className="h-8 w-8" style={{ color: folder.color || 'currentColor' }} />;
     }
   };
 
@@ -76,15 +90,26 @@ export const FolderCard: React.FC<FolderCardProps> = ({
 
   if (variant === 'compact') {
     return (
-      <Card 
+      <Card
         className={cn(
-          "hover-lift cursor-pointer transition-all duration-200 border-0 bg-card/90 backdrop-blur-sm",
+          "hover-lift cursor-pointer transition-all duration-200 border-0 bg-card/90 backdrop-blur-sm relative overflow-hidden",
           "hover:shadow-md hover:scale-[1.02]",
           className
         )}
         onClick={onClick}
+        style={{
+          borderLeft: folder.color ? `4px solid ${folder.color}` : undefined,
+        }}
       >
-        <CardContent className="p-4">
+        {folder.color && (
+          <div
+            className="absolute inset-0 opacity-5 pointer-events-none"
+            style={{
+              background: `linear-gradient(135deg, ${folder.color}10 0%, transparent 100%)`
+            }}
+          />
+        )}
+        <CardContent className="p-4 relative z-10">
           <div className="flex items-center gap-3">
             <div className="flex-shrink-0">
               {getFolderIcon()}
@@ -113,19 +138,35 @@ export const FolderCard: React.FC<FolderCardProps> = ({
   }
 
   return (
-    <Card 
+    <Card
       className={cn(
-        "hover-lift cursor-pointer transition-all duration-200 border-0 bg-card/90 backdrop-blur-sm",
+        "hover-lift cursor-pointer transition-all duration-200 border-0 bg-card/90 backdrop-blur-sm relative overflow-hidden",
         "hover:shadow-md hover:scale-[1.02] group",
         className
       )}
       onClick={onClick}
+      style={{
+        borderLeft: folder.color ? `4px solid ${folder.color}` : undefined,
+      }}
     >
-      <CardContent className="p-6">
+      {folder.color && (
+        <div
+          className="absolute inset-0 opacity-5 pointer-events-none"
+          style={{
+            background: `linear-gradient(135deg, ${folder.color}10 0%, transparent 100%)`
+          }}
+        />
+      )}
+      <CardContent className="p-6 relative z-10">
         <div className="flex flex-col gap-4">
           {/* Header with icon and status */}
           <div className="flex items-start justify-between">
-            <div className="flex-shrink-0 p-3 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+            <div
+              className="flex-shrink-0 p-3 rounded-lg transition-colors"
+              style={{
+                backgroundColor: folder.color ? `${folder.color}15` : 'rgba(var(--primary), 0.1)',
+              }}
+            >
               {getFolderIcon()}
             </div>
             {getStatusBadge()}
@@ -133,7 +174,12 @@ export const FolderCard: React.FC<FolderCardProps> = ({
 
           {/* Folder name */}
           <div>
-            <h3 className="font-semibold text-lg text-foreground group-hover:text-primary transition-colors truncate">
+            <h3
+              className="font-semibold text-lg text-foreground transition-colors truncate"
+              style={{
+                color: folder.color || undefined
+              }}
+            >
               {folder.name}
             </h3>
             {folder.type === 'department' && (
@@ -146,8 +192,8 @@ export const FolderCard: React.FC<FolderCardProps> = ({
             <div className="flex items-center gap-1 text-muted-foreground">
               <FileText className="h-4 w-4" />
               <span>
-                {folder.documentCount !== undefined ? 
-                  `${folder.documentCount} arquivo${folder.documentCount !== 1 ? 's' : ''}` : 
+                {folder.documentCount !== undefined ?
+                  `${folder.documentCount} arquivo${folder.documentCount !== 1 ? 's' : ''}` :
                   'Carregando...'
                 }
               </span>

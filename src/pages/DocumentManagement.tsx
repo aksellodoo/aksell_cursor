@@ -46,6 +46,7 @@ export interface DocumentTreeItem {
   parent_id?: string | null;
   doc_count: number;
   color?: string;
+  icon?: string;
   children: DocumentTreeItem[];
   acl_hash?: string;
   has_custom_acl?: boolean;
@@ -800,7 +801,9 @@ const DocumentManagement: React.FC = () => {
                           type: folder.type,
                           status: folder.status || 'active',
                           documentCount: folder.doc_count,
-                          lastModified: new Date().toISOString()
+                          lastModified: new Date().toISOString(),
+                          color: folder.color,
+                          icon: folder.icon
                         }}
                         onClick={() => handleFolderCardClick(folder)}
                         variant={viewMode === 'grid' ? 'default' : 'compact'}
@@ -853,7 +856,9 @@ const DocumentManagement: React.FC = () => {
                           type: department.type,
                           status: department.status || 'active',
                           documentCount: department.doc_count,
-                          lastModified: new Date().toISOString()
+                          lastModified: new Date().toISOString(),
+                          color: department.color,
+                          icon: department.icon
                         }}
                         onClick={() => handleFolderCardClick(department)}
                         variant={viewMode === 'grid' ? 'default' : 'compact'}
