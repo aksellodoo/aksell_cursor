@@ -243,3 +243,88 @@
     - `src/pages/DocumentManagement.tsx` - Interface + passagem de props
     - `src/components/FolderCard.tsx` - Design visual aprimorado
   - Preview local atualizado e funcionando ✓
+
+#### Integração do ImportWizard no DocumentSelectionModal - 01/10/2025 16:22
+- ✅ **Modal de Seleção de Documentos com Importação Integrada:**
+  - **Objetivo:** Permitir importar arquivos diretamente do modal de seleção na criação de tarefas (tipo Aprovação)
+  - **Funcionalidades implementadas:**
+    - Botão "Importar Arquivo" no header do modal
+    - Alternância entre modo `selection` (seleção) e `import` (importação)
+    - Wizard completo de importação integrado dentro do mesmo modal
+    - Refetch automático da lista de documentos após importação bem-sucedida
+    - ProcessingProgressModal para acompanhar progresso do upload/processamento
+    - Navegação fluida: seleção → importação → processamento → volta para seleção
+
+  - **Modificado `DocumentSelectionModal.tsx`:**
+    - **Imports adicionados:**
+      - ImportWizardProvider e todos os steps do wizard
+      - ProcessingProgressModal
+      - useProcessingOrchestrator
+      - Ícones Plus e Upload do lucide-react
+    - **Estados novos:**
+      - `mode: 'selection' | 'import'` - Controla modo atual do modal
+      - `showImportWizard: boolean` - Controla exibição do wizard
+    - **Hooks de processamento:**
+      - `useProcessingOrchestrator()` - Gerencia upload e processamento de arquivos
+      - `refetch` nos hooks `useDocumentTree` e `useDocumentActions` - Para atualizar listas
+    - **Listeners de eventos:**
+      - Event listener para `startProcessing` - Captura evento disparado pelo wizard
+      - Validações de files, config, folderId e departmentId
+    - **Handlers implementados:**
+      - `handleImportComplete()` - Refaz fetch e volta para modo seleção
+      - `handleCancelImport()` - Cancela importação e limpa estados
+      - `WizardStepContent()` - Componente interno que renderiza steps do wizard
+    - **UI condicional:**
+      - Header muda título: "Selecionar Arquivo" ↔ "Importar Arquivos"
+      - Botão "Importar Arquivo" aparece quando há pasta/departamento selecionado
+      - Conteúdo renderizado condicionalmente via ternário `mode === 'import' ? (...) : (...)`
+      - Fragment `<>...</>` envolvendo ternário + footer para estrutura JSX válida
+    - **ProcessingProgressModal integrado:**
+      - Exibido durante `isProcessing || isCompleted`
+      - Callbacks `onClose`, `onForceStop`, `onMinimize` implementados
+      - Ao fechar após sucesso, chama `handleImportComplete()`
+
+  - **Cores e Ícones aplicados no DocumentSelectionModal:**
+    - `FolderCard` recebe props `color` e `icon` em 2 locais:
+      - Grid de departamentos (raiz)
+      - Grid de subpastas (navegação)
+    - Mesmas melhorias visuais da gestão de documentos aplicadas
+
+  - **Fluxo de uso completo:**
+    1. Usuário cria nova tarefa tipo "Aprovação"
+    2. Seleciona "De arquivo" como origem do dado
+    3. Clica em "Escolher arquivo"
+    4. Modal `DocumentSelectionModal` abre em modo `selection`
+    5. Usuário navega para departamento/pasta desejada
+    6. Clica no botão "Importar Arquivo" (aparece no header)
+    7. Modal muda para modo `import`, exibindo wizard completo
+    8. Usuário completa wizard (quantidade, tipo, upload, etc.)
+    9. Ao finalizar, wizard dispara evento `startProcessing`
+    10. Modal captura evento e inicia `processFiles()`
+    11. `ProcessingProgressModal` abre mostrando progresso
+    12. Após conclusão, usuário clica "Fechar" no ProcessingProgressModal
+    13. Modal chama `refetchDocuments()` e `refetchTree()`
+    14. Modal volta para modo `selection` automaticamente
+    15. Arquivo recém-importado aparece na lista atualizada
+    16. Usuário pode selecioná-lo imediatamente
+
+  - **Vantagens da implementação:**
+    - ✅ Navegação fluida sem fechar/reabrir modais
+    - ✅ Contexto preservado (pasta/departamento atual)
+    - ✅ UX otimizada para criação rápida de tarefas
+    - ✅ Reutilização completa do wizard de importação existente
+    - ✅ Refetch automático garante lista sempre atualizada
+    - ✅ Cores e ícones personalizados facilitam identificação visual
+
+  - **Arquivos modificados:**
+    - `src/components/DocumentSelectionModal.tsx` - Integração completa do wizard
+
+  - **Desafios técnicos resolvidos:**
+    - ❌ Erro de sintaxe JSX "Adjacent JSX elements must be wrapped"
+      - ✅ Solução: Envolver ternário e footer em Fragment `<>...</>`
+    - ❌ Cache do Vite mantendo erros antigos
+      - ✅ Solução: Limpar cache com `rm -rf node_modules/.vite`
+    - ❌ Estado do wizard persistindo entre aberturas
+      - ✅ Solução: Reset de estados no `useEffect` do modal open
+
+  - Preview local atualizado e funcionando ✓

@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Search, Eye, EyeOff, FolderOpen, Folder, File, Grid3x3, List,
   Clock, Star, TrendingUp, FileText, Image, FileSpreadsheet,
-  FileVideo, FileArchive, X, Filter
+  FileVideo, FileArchive, X, Filter, Plus, Upload
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -27,6 +27,20 @@ import { FolderCard } from '@/components/FolderCard';
 import { SearchBarEnhanced } from '@/components/SearchBarEnhanced';
 import type { DocumentTreeItem, DocumentItem, BreadcrumbItem } from '@/pages/DocumentManagement';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+// Import wizard components
+import { ImportWizardProvider, useImportWizard } from '@/components/document-import/ImportWizard';
+import { StepIndicator } from '@/components/document-import/ImportWizard';
+import { FileQuantityStep } from '@/components/document-import/FileQuantityStep';
+import { FileTypeStep } from '@/components/document-import/FileTypeStep';
+import { FileUploadStep } from '@/components/document-import/FileUploadStep';
+import { ProcessingOptionsStep } from '@/components/document-import/ProcessingOptionsStep';
+import { VersioningStep } from '@/components/document-import/VersioningStep';
+import { ApprovalStep } from '@/components/document-import/ApprovalStep';
+import { ReviewApprovalStep } from '@/components/document-import/ReviewApprovalStep';
+import { ProcessingProgressModal } from '@/components/document-import/ProcessingProgressModal';
+import { useProcessingOrchestrator } from '@/hooks/useProcessingOrchestrator';
+import { toast as sonnerToast } from 'sonner';
 
 interface DocumentSelectionModalProps {
   open: boolean;
@@ -52,13 +66,30 @@ export const DocumentSelectionModal: React.FC<DocumentSelectionModalProps> = ({
   const [fileTypeFilter, setFileTypeFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
+  // Import wizard states
+  const [mode, setMode] = useState<'selection' | 'import'>('selection');
+  const [showImportWizard, setShowImportWizard] = useState(false);
+
   // Hooks
-  const { tree, loading: treeLoading } = useDocumentTree({ includeHidden });
-  const { documents, loading: docsLoading } = useDocumentActions(selectedNode?.id);
+  const { tree, loading: treeLoading, refetch: refetchTree } = useDocumentTree({ includeHidden });
+  const { documents, loading: docsLoading, refetch: refetchDocuments } = useDocumentActions(selectedNode?.id);
   const { searchDocuments, loading: searchLoading } = useDocumentSearch();
   const { recentDocuments, loading: recentLoading } = useRecentDocuments(10);
   const { favoriteDocuments, loading: favoritesLoading } = useFavoriteDocuments();
   const { popularDocuments, loading: popularLoading } = usePopularDocuments(10);
+
+  // Processing orchestrator for import wizard
+  const {
+    isProcessing,
+    isCompleted,
+    hasErrors,
+    steps,
+    logs,
+    canForceStop,
+    processFiles,
+    forceStop,
+    reset: resetProcessing
+  } = useProcessingOrchestrator();
 
   // Reset temp selection when modal opens
   useEffect(() => {
@@ -68,8 +99,48 @@ export const DocumentSelectionModal: React.FC<DocumentSelectionModalProps> = ({
       setSearchQuery('');
       setFileTypeFilter('all');
       setStatusFilter('all');
+      setMode('selection');
+      setShowImportWizard(false);
     }
   }, [open, selectedDocumentId]);
+
+  // Listen for processing events from import wizard
+  useEffect(() => {
+    const handleStartProcessing = async (event: CustomEvent) => {
+      console.log('📨 DocumentSelectionModal received startProcessing event:', event.detail);
+
+      const { files, config, folderId, departmentId } = event.detail;
+
+      // Validations
+      if (!files || files.length === 0) {
+        console.error('❌ No files provided to processing');
+        sonnerToast.error('Nenhum arquivo foi fornecido para processamento.');
+        return;
+      }
+
+      if (!departmentId) {
+        console.error('❌ Missing department ID');
+        sonnerToast.error('ID do departamento não encontrado.');
+        return;
+      }
+
+      console.log('🚀 Starting processing with:', {
+        filesCount: files.length,
+        config,
+        folderId,
+        departmentId
+      });
+
+      // Call processFiles from orchestrator
+      await processFiles(files, config, folderId || '', departmentId);
+    };
+
+    window.addEventListener('startProcessing', handleStartProcessing as EventListener);
+
+    return () => {
+      window.removeEventListener('startProcessing', handleStartProcessing as EventListener);
+    };
+  }, [processFiles]);
 
   // Get current folders (children of selected node)
   const currentFolders = useMemo(() => {
@@ -379,55 +450,138 @@ export const DocumentSelectionModal: React.FC<DocumentSelectionModalProps> = ({
     );
   };
 
+  // Component for rendering wizard step content
+  const WizardStepContent: React.FC = () => {
+    const { currentStep } = useImportWizard();
+
+    switch (currentStep) {
+      case 0: return <FileQuantityStep />;
+      case 1: return <FileTypeStep />;
+      case 2: return <FileUploadStep />;
+      case 3: return <VersioningStep />;
+      case 4: return <ApprovalStep />;
+      case 5: return <ReviewApprovalStep />;
+      default: return <FileQuantityStep />;
+    }
+  };
+
+  // Handle completion of import and return to selection mode
+  const handleImportComplete = useCallback(async () => {
+    console.log('🎉 Import complete, refreshing document list...');
+
+    // Refetch documents in current folder
+    await refetchDocuments();
+    await refetchTree();
+
+    // Return to selection mode
+    setMode('selection');
+    setShowImportWizard(false);
+
+    // Reset wizard state
+    resetProcessing();
+
+    sonnerToast.success('Arquivo(s) importado(s) com sucesso!');
+  }, [refetchDocuments, refetchTree, resetProcessing]);
+
+  // Handle closing import wizard
+  const handleCancelImport = useCallback(() => {
+    setMode('selection');
+    setShowImportWizard(false);
+    resetProcessing();
+  }, [resetProcessing]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[95vw] max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
-            <span>Selecionar Arquivo</span>
+            <span>{mode === 'import' ? 'Importar Arquivos' : 'Selecionar Arquivo'}</span>
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
-              >
-                {viewMode === 'grid' ? <List className="h-4 w-4" /> : <Grid3x3 className="h-4 w-4" />}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIncludeHidden(!includeHidden)}
-              >
-                {includeHidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                <span className="ml-2">{includeHidden ? 'Ocultar arquivados' : 'Mostrar arquivados'}</span>
-              </Button>
+              {mode === 'selection' && (
+                <>
+                  {selectedNode && (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => {
+                        setMode('import');
+                        setShowImportWizard(true);
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Importar Arquivo
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
+                  >
+                    {viewMode === 'grid' ? <List className="h-4 w-4" /> : <Grid3x3 className="h-4 w-4" />}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIncludeHidden(!includeHidden)}
+                  >
+                    {includeHidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    <span className="ml-2">{includeHidden ? 'Ocultar arquivados' : 'Mostrar arquivados'}</span>
+                  </Button>
+                </>
+              )}
             </div>
           </DialogTitle>
         </DialogHeader>
 
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="flex-1 flex flex-col min-h-0">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="browse" className="flex items-center gap-2">
-              <Folder className="h-4 w-4" />
-              Navegar
-            </TabsTrigger>
-            <TabsTrigger value="recent" className="flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              Recentes
-            </TabsTrigger>
-            <TabsTrigger value="favorites" className="flex items-center gap-2">
-              <Star className="h-4 w-4" />
-              Favoritos
-            </TabsTrigger>
-            <TabsTrigger value="popular" className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              Populares
-            </TabsTrigger>
-          </TabsList>
+        <>
+          {/* Content - Conditional based on mode */}
+          {mode === 'import' ? (
+          /* Import Wizard Mode */
+          <ImportWizardProvider
+            initialDepartmentId={selectedNode?.type === 'department' ? selectedNode.id : selectedNode?.department_id || ''}
+            initialFolderId={selectedNode?.type === 'folder' ? selectedNode.id : ''}
+          >
+            <div className="flex-1 flex flex-col min-h-0 space-y-4">
+              {/* Step Indicator */}
+              <StepIndicator />
 
-          {/* Browse Tab */}
-          <TabsContent value="browse" className="flex-1 flex flex-col min-h-0 space-y-4">
+              {/* Wizard Step Content */}
+              <div className="flex-1 overflow-auto">
+                <WizardStepContent />
+              </div>
+
+              {/* Footer with Cancel button */}
+              <div className="flex justify-between items-center pt-4 border-t">
+                <Button variant="outline" onClick={handleCancelImport}>
+                  Cancelar Importação
+                </Button>
+              </div>
+            </div>
+          </ImportWizardProvider>
+        ) : (
+          /* Selection Mode (original tabs) */
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="flex-1 flex flex-col min-h-0">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="browse" className="flex items-center gap-2">
+                <Folder className="h-4 w-4" />
+                Navegar
+              </TabsTrigger>
+              <TabsTrigger value="recent" className="flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                Recentes
+              </TabsTrigger>
+              <TabsTrigger value="favorites" className="flex items-center gap-2">
+                <Star className="h-4 w-4" />
+                Favoritos
+              </TabsTrigger>
+              <TabsTrigger value="popular" className="flex items-center gap-2">
+                <TrendingUp className="h-4 w-4" />
+                Populares
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Browse Tab */}
+            <TabsContent value="browse" className="flex-1 flex flex-col min-h-0 space-y-4">
             {/* Breadcrumb and Filters */}
             <div className="space-y-4">
               <Breadcrumb items={breadcrumbs} onItemClick={handleBreadcrumbClick} />
@@ -520,7 +674,9 @@ export const DocumentSelectionModal: React.FC<DocumentSelectionModalProps> = ({
                             type: node.type,
                             status: node.status || 'active',
                             documentCount: node.doc_count,
-                            lastModified: new Date().toISOString()
+                            lastModified: new Date().toISOString(),
+                            color: node.color,
+                            icon: node.icon
                           }}
                           onClick={() => handleNodeSelect(node)}
                         />
@@ -544,7 +700,9 @@ export const DocumentSelectionModal: React.FC<DocumentSelectionModalProps> = ({
                                 type: folder.type,
                                 status: folder.status || 'active',
                                 documentCount: folder.doc_count,
-                                lastModified: new Date().toISOString()
+                                lastModified: new Date().toISOString(),
+                                color: folder.color,
+                                icon: folder.icon
                               }}
                               onClick={() => handleNodeSelect(folder)}
                             />
@@ -612,29 +770,63 @@ export const DocumentSelectionModal: React.FC<DocumentSelectionModalProps> = ({
             )}
           </TabsContent>
         </Tabs>
+        )}
 
-        <DialogFooter className="flex items-center justify-between">
-          <div className="flex-1 text-sm text-muted-foreground">
-            {tempSelectedDocumentName && (
-              <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                <span className="truncate">Selecionado: {tempSelectedDocumentName}</span>
+          {/* Footer - only show in selection mode */}
+          {mode === 'selection' && (
+            <DialogFooter className="flex items-center justify-between">
+              <div className="flex-1 text-sm text-muted-foreground">
+                {tempSelectedDocumentName && (
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    <span className="truncate">Selecionado: {tempSelectedDocumentName}</span>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleConfirmSelection}
-              disabled={!tempSelectedDocumentId}
-            >
-              Selecionar
-            </Button>
-          </div>
-        </DialogFooter>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => onOpenChange(false)}>
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleConfirmSelection}
+                  disabled={!tempSelectedDocumentId}
+                >
+                  Selecionar
+                </Button>
+              </div>
+            </DialogFooter>
+          )}
+        </>
       </DialogContent>
+
+      {/* Processing Progress Modal - shown during import */}
+      <ProcessingProgressModal
+        isOpen={isProcessing || isCompleted}
+        steps={steps}
+        logs={logs}
+        isCompleted={isCompleted}
+        hasErrors={hasErrors}
+        canForceStop={canForceStop}
+        onForceStop={async () => {
+          console.log('🚨 Force stop requested');
+          forceStop();
+        }}
+        onClose={async () => {
+          console.log('🔄 Closing processing modal');
+          if (isCompleted && !hasErrors) {
+            // Import completed successfully
+            await handleImportComplete();
+          } else if (hasErrors) {
+            // Import had errors, just close
+            setMode('selection');
+            setShowImportWizard(false);
+          }
+        }}
+        onMinimize={() => {
+          console.log('🔽 Minimizing processing modal');
+          // Could implement minimize functionality if needed
+        }}
+      />
     </Dialog>
   );
 };
