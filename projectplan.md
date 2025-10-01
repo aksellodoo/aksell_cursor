@@ -328,3 +328,35 @@
       - ✅ Solução: Reset de estados no `useEffect` do modal open
 
   - Preview local atualizado e funcionando ✓
+
+#### Correção do Botão "Importar Arquivo" no DocumentSelectionModal - 01/10/2025 17:15
+- ✅ **Problema identificado:**
+  - Botão "Importar Arquivo" estava **escondido** até que usuário selecionasse um departamento/pasta
+  - Comportamento inconsistente com a tela de Gestão de Documentos
+  - UX confusa: usuário não sabia que a funcionalidade existia
+
+- ✅ **Solução implementada:**
+  - Removida condição `{selectedNode && (` que escondia o botão
+  - Botão agora está **sempre visível** no header do modal
+  - Adicionada propriedade `disabled={!selectedNode}` para desabilitar quando necessário
+  - Adicionado `title` tooltip: "Selecione um departamento ou pasta primeiro"
+
+- ✅ **Comportamento corrigido:**
+  - Modal abre → Botão "Importar Arquivo" visível mas **desabilitado** (cinza)
+  - Usuário clica em departamento/pasta → Botão fica **habilitado** (azul)
+  - Usuário clica no botão → Wizard de importação abre normalmente
+  - Comportamento agora idêntico à tela de Gestão de Documentos
+
+- ✅ **Arquivo modificado:**
+  - `src/components/DocumentSelectionModal.tsx` (linhas 502-514)
+    - Removida condição de visibilidade condicional
+    - Adicionado `disabled={!selectedNode}`
+    - Adicionado tooltip explicativo
+
+- ✅ **Benefícios:**
+  - UX mais clara e consistente
+  - Usuário sempre vê a opção de importar disponível
+  - Estado desabilitado indica visualmente que precisa selecionar primeiro
+  - Tooltip explica o motivo do desabilitamento
+
+- Preview local atualizado e funcionando ✓

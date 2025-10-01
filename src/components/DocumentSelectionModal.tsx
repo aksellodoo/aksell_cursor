@@ -499,19 +499,19 @@ export const DocumentSelectionModal: React.FC<DocumentSelectionModalProps> = ({
             <div className="flex items-center gap-2">
               {mode === 'selection' && (
                 <>
-                  {selectedNode && (
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={() => {
-                        setMode('import');
-                        setShowImportWizard(true);
-                      }}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Importar Arquivo
-                    </Button>
-                  )}
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => {
+                      setMode('import');
+                      setShowImportWizard(true);
+                    }}
+                    disabled={!selectedNode}
+                    title={!selectedNode ? 'Selecione um departamento ou pasta primeiro' : 'Importar arquivo'}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Importar Arquivo
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"
