@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Settings2, Edit, Trash2, MoreHorizontal, MessageCircle, Folder } from "lucide-react";
+import { getIconComponent } from "@/utils/departmentIcons";
 import {
   Table,
   TableBody,
@@ -136,13 +137,14 @@ export const Departments = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-[50px]">Ícone</TableHead>
                       <TableHead className="w-[50px]">Cor</TableHead>
                       <TableHead>Nome</TableHead>
                       <TableHead>Descrição</TableHead>
                       <TableHead className="text-center">Organograma</TableHead>
-                      
+
                       <TableHead>Criado em</TableHead>
-                      
+
                       <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -151,11 +153,18 @@ export const Departments = () => {
                       const DepartmentRowContent = () => {
                         const { openChatter } = useChatterNavigation();
                         
+                        const IconComponent = getIconComponent(department.icon || 'Building2');
+
                         return (
                           <TableRow key={department.id} className="hover:bg-muted/50">
                             <TableCell>
-                              <div 
-                                className="w-4 h-4 rounded-full border border-border" 
+                              <div className="flex items-center justify-center">
+                                <IconComponent className="h-5 w-5 text-muted-foreground" />
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div
+                                className="w-4 h-4 rounded-full border border-border"
                                 style={{ backgroundColor: department.color }}
                               />
                             </TableCell>

@@ -356,19 +356,10 @@ export const DocumentSelectionModal: React.FC<DocumentSelectionModalProps> = ({
 
   const renderQuickAccessSection = (
     documents: DocumentItem[] | undefined,
-    loading: boolean,
     icon: React.ReactNode,
     title: string,
     emptyMessage: string
   ) => {
-    if (loading) {
-      return (
-        <div className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        </div>
-      );
-    }
-
     if (!documents || documents.length === 0) {
       return (
         <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
@@ -511,14 +502,7 @@ export const DocumentSelectionModal: React.FC<DocumentSelectionModalProps> = ({
             <div className="flex-1 overflow-auto">
                 {!selectedNode ? (
                   // Show folders grid when no folder selected
-                  treeLoading ? (
-                    <div className="flex items-center justify-center h-full">
-                      <div className="text-center">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                        <p className="text-muted-foreground">Carregando pastas...</p>
-                      </div>
-                    </div>
-                  ) : tree.length === 0 ? (
+                  tree.length === 0 ? (
                     <div className="flex items-center justify-center h-full text-muted-foreground">
                       <div className="text-center">
                         <FolderOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -530,7 +514,14 @@ export const DocumentSelectionModal: React.FC<DocumentSelectionModalProps> = ({
                       {tree.map((node) => (
                         <FolderCard
                           key={node.id}
-                          folder={node}
+                          folder={{
+                            id: node.id,
+                            name: node.name,
+                            type: node.type,
+                            status: node.status || 'active',
+                            documentCount: node.doc_count,
+                            lastModified: new Date().toISOString()
+                          }}
                           onClick={() => handleNodeSelect(node)}
                         />
                       ))}
@@ -547,7 +538,14 @@ export const DocumentSelectionModal: React.FC<DocumentSelectionModalProps> = ({
                           {currentFolders.map((folder) => (
                             <FolderCard
                               key={folder.id}
-                              folder={folder}
+                              folder={{
+                                id: folder.id,
+                                name: folder.name,
+                                type: folder.type,
+                                status: folder.status || 'active',
+                                documentCount: folder.doc_count,
+                                lastModified: new Date().toISOString()
+                              }}
                               onClick={() => handleNodeSelect(folder)}
                             />
                           ))}
@@ -556,14 +554,7 @@ export const DocumentSelectionModal: React.FC<DocumentSelectionModalProps> = ({
                     )}
 
                     {/* Documents */}
-                    {docsLoading ? (
-                      <div className="flex items-center justify-center py-12">
-                        <div className="text-center">
-                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-                          <p className="text-muted-foreground">Carregando documentos...</p>
-                        </div>
-                      </div>
-                    ) : filteredDocuments.length === 0 ? (
+                    {filteredDocuments.length === 0 ? (
                       <div className="flex items-center justify-center py-12 text-muted-foreground">
                         <div className="text-center">
                           <File className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -595,7 +586,6 @@ export const DocumentSelectionModal: React.FC<DocumentSelectionModalProps> = ({
           <TabsContent value="recent" className="flex-1 overflow-auto">
             {renderQuickAccessSection(
               recentDocuments,
-              recentLoading,
               <Clock className="h-12 w-12 opacity-50" />,
               "Documentos Recentes",
               "Você ainda não acessou nenhum documento"
@@ -606,7 +596,6 @@ export const DocumentSelectionModal: React.FC<DocumentSelectionModalProps> = ({
           <TabsContent value="favorites" className="flex-1 overflow-auto">
             {renderQuickAccessSection(
               favoriteDocuments,
-              favoritesLoading,
               <Star className="h-12 w-12 opacity-50" />,
               "Documentos Favoritos",
               "Você ainda não possui documentos favoritos"
@@ -617,7 +606,6 @@ export const DocumentSelectionModal: React.FC<DocumentSelectionModalProps> = ({
           <TabsContent value="popular" className="flex-1 overflow-auto">
             {renderQuickAccessSection(
               popularDocuments,
-              popularLoading,
               <TrendingUp className="h-12 w-12 opacity-50" />,
               "Documentos Populares",
               "Nenhum documento popular no momento"

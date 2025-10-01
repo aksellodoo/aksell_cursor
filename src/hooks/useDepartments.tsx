@@ -7,6 +7,7 @@ export interface Department {
   name: string;
   description: string | null;
   color: string;
+  icon: string;
   integrates_org_chart: boolean;
   document_root_enabled: boolean;
   document_root_folder_id: string | null;

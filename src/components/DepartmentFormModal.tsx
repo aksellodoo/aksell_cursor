@@ -9,15 +9,22 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { generateColorFromName } from "@/utils/colorUtils";
-import { Palette, Plus, Trash2, FolderOpen, FileText, Settings } from "lucide-react";
+import { Palette, Plus, Trash2, FolderOpen, FileText, Settings, Sparkles, Loader2 } from "lucide-react";
 import { useDepartmentFolders } from "@/hooks/useDepartmentFolders";
 import { FolderManagementModal } from "./FolderManagementModal";
+import { AVAILABLE_ICONS, getIconComponent } from "@/utils/departmentIcons";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 interface Department {
   id: string;
   name: string;
   description: string | null;
   color: string;
+  icon: string;
   integrates_org_chart: boolean;
   document_root_enabled: boolean;
   document_root_folder_id: string | null;
@@ -40,14 +47,18 @@ export const DepartmentFormModal = ({ open, onClose, department }: DepartmentFor
     name: "",
     description: "",
     color: "#3B82F6",
+    icon: "Building2",
     integrates_org_chart: false,
     document_root_enabled: false,
   });
   const [subfolders, setSubfolders] = useState<SubfolderItem[]>([]);
   const [newSubfolderName, setNewSubfolderName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingIconSuggestion, setLoadingIconSuggestion] = useState(false);
   const [userChangedColor, setUserChangedColor] = useState(false);
+  const [userChangedIcon, setUserChangedIcon] = useState(false);
   const [showFolderManagement, setShowFolderManagement] = useState(false);
+  const [iconPopoverOpen, setIconPopoverOpen] = useState(false);
   const { toast } = useToast();
   
   const { folders, loading: foldersLoading, createFolder, deleteFolder } = useDepartmentFolders(
@@ -60,11 +71,13 @@ export const DepartmentFormModal = ({ open, onClose, department }: DepartmentFor
         name: department.name,
         description: department.description || "",
         color: department.color,
+        icon: department.icon || "Building2",
         integrates_org_chart: department.integrates_org_chart,
         document_root_enabled: department.document_root_enabled,
       });
       setUserChangedColor(true);
-      
+      setUserChangedIcon(true);
+
       // Carregar subpastas existentes (excluindo a pasta raiz)
       const existingSubfolders = folders
         .filter(folder => !folder.is_root)
@@ -79,10 +92,12 @@ export const DepartmentFormModal = ({ open, onClose, department }: DepartmentFor
         name: "",
         description: "",
         color: "#3B82F6",
+        icon: "Building2",
         integrates_org_chart: false,
         document_root_enabled: false,
       });
       setUserChangedColor(false);
+      setUserChangedIcon(false);
       setSubfolders([]);
     }
     setNewSubfolderName("");
@@ -108,6 +123,55 @@ export const DepartmentFormModal = ({ open, onClose, department }: DepartmentFor
       setUserChangedColor(false);
     }
   };
+
+  const handleSuggestIcon = async () => {
+    if (!formData.name.trim()) {
+      toast({
+        title: "Nome necessário",
+        description: "Digite o nome do departamento primeiro",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoadingIconSuggestion(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('suggest-department-icon', {
+        body: { departmentName: formData.name }
+      });
+
+      if (error) throw error;
+
+      if (data && data.icon) {
+        setFormData({ ...formData, icon: data.icon });
+        setUserChangedIcon(false);
+
+        toast({
+          title: "Ícone sugerido!",
+          description: data.reasoning || `Sugestão: ${data.icon}`,
+        });
+      }
+    } catch (error: any) {
+      console.error('Error suggesting icon:', error);
+      toast({
+        title: "Erro ao sugerir ícone",
+        description: error.message || "Tente novamente",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingIconSuggestion(false);
+    }
+  };
+
+  // Auto-suggest icon based on department name (only on creation)
+  useEffect(() => {
+    if (!department && !userChangedIcon && formData.name.trim().length > 3) {
+      const debounce = setTimeout(() => {
+        handleSuggestIcon();
+      }, 1000);
+      return () => clearTimeout(debounce);
+    }
+  }, [formData.name]);
 
   const addSubfolder = () => {
     if (newSubfolderName.trim()) {
@@ -246,6 +310,72 @@ export const DepartmentFormModal = ({ open, onClose, department }: DepartmentFor
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 rows={3}
               />
+            </div>
+
+            <div>
+              <Label htmlFor="icon">Ícone do Departamento</Label>
+              {!department && (
+                <p className="text-sm text-muted-foreground mb-2">
+                  O ícone é sugerido automaticamente pela IA baseado no nome do departamento
+                </p>
+              )}
+              <div className="flex items-center space-x-2">
+                <Popover open={iconPopoverOpen} onOpenChange={setIconPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-16 h-10 p-0"
+                    >
+                      {(() => {
+                        const IconComponent = getIconComponent(formData.icon);
+                        return <IconComponent className="h-5 w-5" />;
+                      })()}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80">
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm">Selecione um ícone</h4>
+                      <div className="grid grid-cols-5 gap-2 max-h-[300px] overflow-y-auto">
+                        {AVAILABLE_ICONS.map(({ name, label, component: IconComp }) => (
+                          <Button
+                            key={name}
+                            type="button"
+                            variant={formData.icon === name ? "default" : "outline"}
+                            className="h-12 w-12 p-0"
+                            onClick={() => {
+                              setFormData({ ...formData, icon: name });
+                              setUserChangedIcon(true);
+                              setIconPopoverOpen(false);
+                            }}
+                            title={label}
+                          >
+                            <IconComp className="h-5 w-5" />
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+                <div className="flex-1 flex items-center px-3 py-2 border rounded-md bg-muted/50">
+                  <span className="text-sm">{formData.icon}</span>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSuggestIcon}
+                  disabled={!formData.name.trim() || loadingIconSuggestion}
+                  className="flex items-center space-x-1"
+                >
+                  {loadingIconSuggestion ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-4 w-4" />
+                  )}
+                  <span>Sugerir com IA</span>
+                </Button>
+              </div>
             </div>
 
             <div>
