@@ -84,8 +84,8 @@ export const useFormValidation = (config: any) => {
     if (!estimatedFillMinutes) {
       errors.push({
         field: 'estimated_fill_minutes',
-        message: 'Tempo estimado de preenchimento é obrigatório',
-        severity: 'critical',
+        message: 'Recomendamos informar o tempo estimado de preenchimento',
+        severity: 'warning',
         tab: 'settings'
       });
     }
@@ -139,18 +139,16 @@ export const useFormValidation = (config: any) => {
     } else {
       // For published forms, only count required fields
       if (isTaskUsage) {
-        // Para formulários de uso em tarefas, só precisamos de status, confidencialidade e tempo estimado
-        totalFields = 3;
+        // Para formulários de uso em tarefas, só precisamos de status e confidencialidade
+        totalFields = 2;
         if (config.status && config.status !== 'draft') completedFields++;
         if (config.confidentiality_level) completedFields++;
-        if (config.estimated_fill_minutes) completedFields++;
       } else {
-        totalFields = (isInternal && isExternal ? 4 : 3) + 1; // status, confidentiality, recipients (internal/external/both) + estimated_fill_minutes
+        totalFields = (isInternal && isExternal ? 4 : 3); // status, confidentiality, recipients (internal/external/both)
         if (config.status && config.status !== 'draft') completedFields++;
         if (config.confidentiality_level) completedFields++;
-        if (config.estimated_fill_minutes) completedFields++;
-        if (isInternal && ((config.internal_recipients?.users?.length > 0) || 
-                           (config.internal_recipients?.departments?.length > 0) || 
+        if (isInternal && ((config.internal_recipients?.users?.length > 0) ||
+                           (config.internal_recipients?.departments?.length > 0) ||
                            (config.internal_recipients?.roles?.length > 0))) completedFields++;
         if (isExternal && (config.allows_anonymous_responses || config.external_recipients?.length > 0 || config.external_contact_ids?.length > 0)) completedFields++;
       }

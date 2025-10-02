@@ -630,7 +630,8 @@ export const FormBuilder = ({ form, onSave, onCancel, embedded = false, lockedSt
         allowed_roles: configData.allowed_roles,
         publication_settings: configData.publication_settings,
         is_published: configData.is_published,
-        published_at: configData.published_at
+        published_at: configData.published_at,
+        external_contact_ids: configData.external_contact_ids || []
       };
 
       console.log('FormBuilder.saveForm - Dados preparados para salvar:', formDataToSave);
@@ -2066,7 +2067,11 @@ export const FormBuilder = ({ form, onSave, onCancel, embedded = false, lockedSt
           onClose={() => setIsConfigDialogOpen(false)}
           onSave={saveForm}
           formId={currentFormId}
-          form={form}
+          form={form || {
+            title: formData.title,
+            description: formData.description,
+            id: currentFormId
+          }}
           lockedStatus={lockedStatus}
         />
       </div>
