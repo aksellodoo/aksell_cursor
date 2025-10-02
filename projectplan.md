@@ -96,12 +96,131 @@
   - Arquivo: `src/components/ContactsPickerModal.tsx` (linhas 79, 88, 102, 112, 195, 215)
   - Data: 03/10/2025 00:50
 
-- ⚠️ **AÇÃO NECESSÁRIA - Migração SQL:**
+- ✅ **Correção de Navegação ao Cancelar Cadastro de Contato:**
+  - **Problema:** Ao clicar em "Cadastrar Contato" no ContactsPickerModal e depois cancelar, usuário era levado para `/gestao/contatos` ao invés de voltar para o modal
+  - **Fluxo problemático:** FormConfigurationModal → ContactsPickerModal → `/gestao/contatos/novo` → Cancelar → `/gestao/contatos` ❌
+  - **Fluxo correto:** FormConfigurationModal → ContactsPickerModal → `/gestao/contatos/novo` → Cancelar → ContactsPickerModal ✅
+  - **Solução implementada:**
+    - Criada função `handleCancel()` no ContactForm que verifica sessionStorage
+    - Se existe `formExternalContactsPickerState.returnToFormConfig === true`:
+      - Usa `navigate(-1)` para voltar à página anterior
+      - Limpa sessionStorage após uso
+    - Caso contrário, mantém comportamento padrão (`navigate('/gestao/contatos')`)
+  - **Mudanças realizadas:**
+    - Nova função `handleCancel()` (linhas 98-114)
+    - Atualizado `CustomFullscreenModal.onClose` para usar `handleCancel` (linhas 395, 404)
+    - Atualizado botão "Cancelar" para usar `handleCancel` (linha 1125)
+  - **Resultado:** Navegação mantém contexto do usuário, voltando para ContactsPickerModal ao cancelar cadastro
+  - Arquivo: `src/pages/ContactForm.tsx`
+  - Data: 03/10/2025 01:27
+
+### 2025-10-03
+
+#### Sistema de Notificação Multi-canal para Formulários Externos (FASE 1 - Parcial)
+- 🚧 **Status:** Implementação parcial (4/7 componentes concluídos)
+- ✅ **Migração SQL - Tabela form_external_invitations:**
+  - Criada tabela para gerenciar convites e envios de formulários
+  - Campos de controle por canal: `send_via_email`, `send_via_whatsapp`, `send_via_telegram`
+  - Timestamps de envio e abertura por canal
+  - Token único `form_access_token` para acesso sem autenticação
+  - Rastreamento de respostas: `responded_at`, `response_id`
+  - Políticas RLS para criadores + política pública para validação de token
+  - Trigger automático de `updated_at`
+  - Arquivo: `supabase/migrations/20251003000000_create_form_invitations.sql`
+  - Data: 03/10/2025 02:30
+
+- ✅ **Hook useFormInvitations:**
+  - Gerenciamento completo de convites e envios
+  - Funções:
+    - `sendInvitations()`: Envia convites para múltiplos contatos
+    - `getFormInvitations()`: Busca convites de um formulário
+    - `validateToken()`: Valida token de acesso
+    - `markAsResponded()`: Marca convite como respondido
+  - Geração de tokens seguros com `crypto.randomUUID()`
+  - Suporte a envios assíncronos com progress tracking
+  - Tratamento de erros por canal
+  - Delay de 500ms entre envios (rate limiting básico)
+  - Arquivo: `src/hooks/useFormInvitations.tsx`
+  - Data: 03/10/2025 02:45
+
+- ✅ **Componente DeliveryChannelSelector:**
+  - Interface elegante para seleção de canais por contato
+  - Detecção automática de canais disponíveis:
+    - Email: Se `contact.email_primary` existe
+    - WhatsApp: Se `contact.mobile_phone` E `messaging_whatsapp === true`
+    - Telegram: Se `contact.mobile_phone` E `messaging_telegram === true`
+  - Warnings visuais para contatos sem canais
+  - Auto-seleção de email quando disponível
+  - Preview de informações do formulário (título, tempo estimado, prazo)
+  - Progress bar durante envio
+  - Tela de resultados com resumo de sucessos/falhas
+  - Layout responsivo com flexbox
+  - Arquivo: `src/components/DeliveryChannelSelector.tsx`
+  - Data: 03/10/2025 03:00
+
+- ✅ **Edge Function send-form-invitation:**
+  - Endpoint Supabase para envio de convites por email
+  - Usa Resend API (noreply@aksell.com.br)
+  - Template HTML profissional e responsivo
+  - Informações incluídas:
+    - Nome do formulário + descrição
+    - Tempo estimado de preenchimento
+    - Prazo para resposta
+    - Nome do solicitante
+    - Link único para acesso direto
+  - Suporte a CORS
+  - Logs de envio
+  - Arquivo: `supabase/functions/send-form-invitation/index.ts`
+  - Data: 03/10/2025 03:15
+
+- ⏳ **PENDENTE - Integração no FormConfigurationModal:**
+  - Adicionar botão "Publicar e Enviar Convites"
+  - Abrir DeliveryChannelSelector após salvar formulário
+  - Passar informações do formulário e contatos selecionados
+  - Implementar callback de conclusão
+
+- ⏳ **PENDENTE - Página FormPublicFill:**
+  - Rota: `/formulario/publico/:token`
+  - Validar token único
+  - Carregar formulário associado
+  - Permitir preenchimento sem login
+  - Salvar resposta vinculada ao contato
+  - Marcar convite como respondido
+
+- ⏳ **PENDENTE - Testes e Deploy:**
+  - Executar migração SQL no Supabase
+  - Deploy da edge function
+  - Testes do fluxo end-to-end
+  - Documentação de uso
+
+- 📋 **Próximos Passos:**
+  1. Integrar DeliveryChannelSelector no FormConfigurationModal
+  2. Criar página de preenchimento público (FormPublicFill.tsx)
+  3. Adicionar rota no React Router
+  4. Executar migração SQL
+  5. Deploy da edge function
+  6. Testes completos do fluxo
+
+- 🎯 **Funcionalidades Futuras (Fase 2+):**
+  - Integração WhatsApp Business API
+  - Integração Telegram Bot API
+  - Dashboard de entregas e engajamento
+  - Reenvio seletivo de convites
+  - Lembretes automáticos antes do prazo
+  - Relatórios de taxa de resposta por canal
+
+- ⚠️ **AÇÃO NECESSÁRIA - Migrações SQL:**
   - Executar migração manualmente no Supabase Dashboard:
   ```sql
-  -- Copiar conteúdo de: supabase/migrations/20251002230000_add_form_external_contacts.sql
+  -- 1. Copiar conteúdo de: supabase/migrations/20251002230000_add_form_external_contacts.sql
+  -- 2. Copiar conteúdo de: supabase/migrations/20251003000000_create_form_invitations.sql
   ```
   - Ou via Supabase CLI quando houver sync das migrações
+
+- ⚠️ **AÇÃO NECESSÁRIA - Deploy Edge Function:**
+  ```bash
+  supabase functions deploy send-form-invitation
+  ```
 
 #### Sistema de Múltiplas Moedas no Form Builder
 - ✅ **Suporte para Múltiplas Moedas:**

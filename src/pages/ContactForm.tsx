@@ -84,15 +84,34 @@ export default function ContactForm() {
   const { departments } = useDepartments();
   const { links: friendsFamilyLinks, createLink: createFriendsFamily, deleteLink: deleteFriendsFamily } = useFriendsFamilyLinks(id);
   const { employees } = useEmployees();
-  
+
   const [contactLinks, setContactLinks] = useState<Array<{ link_type: 'cliente' | 'fornecedor' | 'representante' | 'entidade'; target_id: string; target_kind?: string }>>([]);
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [activeTab, setActiveTab] = useState('dados');
   const [nameWarning, setNameWarning] = useState<{ exists: boolean; contacts?: Contact[] }>({ exists: false });
   const [emailError, setEmailError] = useState<{ exists: boolean; contact?: Contact }>({ exists: false });
-  
+
   const { enrichedLinks, loading: loadingEnrichedLinks } = useEnrichedContactLinks(contactLinks);
   const { toast } = useToast();
+
+  // Handle cancel navigation - check if returning from ContactsPickerModal context
+  const handleCancel = () => {
+    try {
+      const savedState = sessionStorage.getItem('formExternalContactsPickerState');
+      if (savedState) {
+        const { returnToFormConfig } = JSON.parse(savedState);
+        if (returnToFormConfig) {
+          sessionStorage.removeItem('formExternalContactsPickerState');
+          navigate(-1); // Go back to previous page (ContactsPickerModal)
+          return;
+        }
+      }
+    } catch (error) {
+      console.error('Error parsing sessionStorage state:', error);
+    }
+    // Default behavior: navigate to contacts list
+    navigate('/gestao/contatos');
+  };
 
   const form = useForm<ContactFormData>({
     resolver: zodResolver(contactSchema),
@@ -373,7 +392,7 @@ export default function ContactForm() {
 
   if (isLoadingContact && isEditing) {
     return (
-      <CustomFullscreenModal isOpen={true} onClose={() => navigate('/gestao/contatos')}>
+      <CustomFullscreenModal isOpen={true} onClose={handleCancel}>
         <div className="flex items-center justify-center h-full">
           <LoadingSpinner />
         </div>
@@ -382,7 +401,7 @@ export default function ContactForm() {
   }
 
   return (
-    <CustomFullscreenModal isOpen={true} onClose={() => navigate('/gestao/contatos')}>
+    <CustomFullscreenModal isOpen={true} onClose={handleCancel}>
       <div className="h-full overflow-y-auto">
         <div className="max-w-4xl mx-auto p-6">
           <Form {...form}>
@@ -1099,11 +1118,11 @@ export default function ContactForm() {
 
                 <div className="mt-8 space-y-4">
                   <div className="flex gap-4">
-                    <Button 
+                    <Button
                       type="button"
                       variant="outline"
                       className="flex-1"
-                      onClick={() => navigate('/gestao/contatos')}
+                      onClick={handleCancel}
                       disabled={isCreating || isUpdating}
                     >
                       Cancelar
