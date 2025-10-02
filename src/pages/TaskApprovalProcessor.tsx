@@ -18,7 +18,10 @@ import {
   Building,
   Mail,
   MessageSquare,
-  Flag
+  Flag,
+  ExternalLink,
+  CheckSquare,
+  AlertTriangle
 } from 'lucide-react';
 import { useTaskApproval } from '@/hooks/useTaskApproval';
 import { TaskAttachmentViewer } from '@/components/TaskAttachmentViewer';
@@ -50,7 +53,7 @@ export const TaskApprovalProcessor = () => {
     const success = await processApproval(decision, justification);
     if (success) {
       setTimeout(() => {
-        navigate('/tarefas');
+        navigate('/tasks');
       }, 1500);
     }
   };
@@ -64,10 +67,10 @@ export const TaskApprovalProcessor = () => {
   };
 
   const statusConfig = {
-    todo: { label: 'A Fazer', variant: 'outline' as const, color: 'text-gray-600' },
-    in_progress: { label: 'Em Andamento', variant: 'default' as const, color: 'text-blue-600' },
-    review: { label: 'Em Revisão', variant: 'secondary' as const, color: 'text-yellow-600' },
-    done: { label: 'Concluída', variant: 'default' as const, color: 'text-green-600' },
+    todo: { label: 'A Fazer', variant: 'outline' as const },
+    in_progress: { label: 'Em Andamento', variant: 'default' as const },
+    review: { label: 'Em Revisão', variant: 'secondary' as const },
+    done: { label: 'Concluída', variant: 'default' as const },
   };
 
   const priorityConfig = {
@@ -97,7 +100,7 @@ export const TaskApprovalProcessor = () => {
             <div className="text-center space-y-4">
               <AlertCircle className="w-12 h-12 mx-auto text-destructive" />
               <h2 className="text-lg font-semibold">Tarefa não encontrada</h2>
-              <Button onClick={() => navigate('/tarefas')}>
+              <Button onClick={() => navigate('/tasks')}>
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Voltar para Tarefas
               </Button>
@@ -127,7 +130,7 @@ export const TaskApprovalProcessor = () => {
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Button variant="ghost" size="sm" onClick={() => navigate('/tarefas')}>
+              <Button variant="ghost" size="sm" onClick={() => navigate('/tasks')}>
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Voltar
               </Button>
@@ -148,14 +151,14 @@ export const TaskApprovalProcessor = () => {
 
       {/* Content */}
       <div className="container mx-auto px-6 py-8 space-y-6 max-w-6xl">
-        {/* Informações da Tarefa */}
+        {/* Seção 1: Informações da Tarefa */}
         <Card>
           <CardHeader>
             <div className="flex items-start justify-between">
               <div className="space-y-2 flex-1">
                 <CardTitle className="text-2xl">{task.title}</CardTitle>
                 {task.description && (
-                  <CardDescription className="text-base">{task.description}</CardDescription>
+                  <CardDescription className="text-base whitespace-pre-wrap">{task.description}</CardDescription>
                 )}
               </div>
               <Badge variant={priorityConfig[task.priority as keyof typeof priorityConfig]?.variant}>
@@ -167,8 +170,8 @@ export const TaskApprovalProcessor = () => {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <User className="w-5 h-5 text-muted-foreground" />
+                <div className="flex items-start gap-3">
+                  <User className="w-5 h-5 text-muted-foreground mt-0.5" />
                   <div>
                     <p className="text-sm text-muted-foreground">Solicitado por</p>
                     <p className="font-medium">{task.creator?.name}</p>
@@ -176,8 +179,8 @@ export const TaskApprovalProcessor = () => {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <Building className="w-5 h-5 text-muted-foreground" />
+                <div className="flex items-start gap-3">
+                  <Building className="w-5 h-5 text-muted-foreground mt-0.5" />
                   <div>
                     <p className="text-sm text-muted-foreground">Departamento</p>
                     <p className="font-medium">{task.creator?.department || 'Não informado'}</p>
@@ -186,8 +189,8 @@ export const TaskApprovalProcessor = () => {
               </div>
 
               <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <Calendar className="w-5 h-5 text-muted-foreground" />
+                <div className="flex items-start gap-3">
+                  <Calendar className="w-5 h-5 text-muted-foreground mt-0.5" />
                   <div>
                     <p className="text-sm text-muted-foreground">Data de criação</p>
                     <p className="font-medium">
@@ -197,8 +200,8 @@ export const TaskApprovalProcessor = () => {
                 </div>
 
                 {task.due_date && (
-                  <div className="flex items-center gap-3">
-                    <Clock className="w-5 h-5 text-muted-foreground" />
+                  <div className="flex items-start gap-3">
+                    <Clock className="w-5 h-5 text-muted-foreground mt-0.5" />
                     <div>
                       <p className="text-sm text-muted-foreground">Prazo</p>
                       <p className="font-medium">
@@ -209,10 +212,79 @@ export const TaskApprovalProcessor = () => {
                 )}
               </div>
             </div>
+
+            {/* WebLink */}
+            {task.weblink && (
+              <>
+                <Separator className="my-4" />
+                <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <div className="flex items-center gap-2">
+                    <ExternalLink className="w-4 h-4 text-blue-600" />
+                    <span className="text-sm font-medium text-blue-900 dark:text-blue-100">Link Externo</span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open(task.weblink!, '_blank')}
+                    className="border-blue-300 hover:bg-blue-100"
+                  >
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    Abrir Link
+                  </Button>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
-        {/* Conteúdo para Aprovação */}
+        {/* Seção 2: Critérios e Requisitos de Aprovação */}
+        {(task.payload.approval_criteria?.length ||
+          task.payload.require_justification ||
+          task.payload.expires_at) && (
+          <Card className="border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-amber-900 dark:text-amber-100">
+                <AlertTriangle className="w-5 h-5" />
+                Critérios e Requisitos de Aprovação
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Critérios de Aprovação */}
+              {task.payload.approval_criteria && task.payload.approval_criteria.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
+                    Critérios a serem verificados:
+                  </p>
+                  <div className="space-y-2">
+                    {task.payload.approval_criteria.map((criteria, index) => (
+                      <div key={index} className="flex items-start gap-2">
+                        <CheckSquare className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                        <span className="text-sm">{criteria}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Badges de Requisitos */}
+              <div className="flex flex-wrap gap-2">
+                {task.payload.require_justification && (
+                  <Badge variant="outline" className="border-amber-300 bg-amber-100 text-amber-900">
+                    Justificativa Obrigatória
+                  </Badge>
+                )}
+                {task.payload.expires_at && (
+                  <Badge variant="outline" className="border-amber-300 bg-amber-100 text-amber-900">
+                    <Clock className="w-3 h-3 mr-1" />
+                    Expira em: {format(new Date(task.payload.expires_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                  </Badge>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Seção 3: Conteúdo para Aprovação */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -222,17 +294,17 @@ export const TaskApprovalProcessor = () => {
           </CardHeader>
           <CardContent>
             {/* Renderizar baseado no data_source */}
-            {task.payload.data_source === 'file' && (
+            {task.payload.data_source === 'file' && attachments.length > 0 && (
               <TaskAttachmentViewer attachments={attachments} />
             )}
 
             {task.payload.data_source === 'form' && formResponseData && (
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
-                  <div className="flex items-center gap-3">
-                    <FileText className="w-8 h-8 text-primary" />
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border-2 rounded-lg bg-primary/5 border-primary/20 gap-4">
+                  <div className="flex items-start gap-3">
+                    <FileText className="w-8 h-8 text-primary flex-shrink-0" />
                     <div>
-                      <p className="font-medium">{formResponseData.form.title}</p>
+                      <p className="font-semibold text-lg">{formResponseData.form.title}</p>
                       <p className="text-sm text-muted-foreground">
                         Preenchido por {formResponseData.response.user_name}
                       </p>
@@ -241,10 +313,13 @@ export const TaskApprovalProcessor = () => {
                           locale: ptBR
                         })}
                       </p>
+                      <Badge variant="secondary" className="mt-2">
+                        {formResponseData.form.fields_definition?.length || 0} campos
+                      </Badge>
                     </div>
                   </div>
-                  <Button onClick={() => setShowFormViewer(true)}>
-                    <FileText className="w-4 h-4 mr-2" />
+                  <Button size="lg" onClick={() => setShowFormViewer(true)} className="w-full sm:w-auto">
+                    <FileText className="w-5 h-5 mr-2" />
                     Ver Formulário Preenchido
                   </Button>
                 </div>
@@ -252,19 +327,39 @@ export const TaskApprovalProcessor = () => {
             )}
 
             {task.payload.data_source === 'text' && task.payload.text_content && (
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="prose max-w-none">
-                    <p className="whitespace-pre-wrap">{task.payload.text_content}</p>
-                  </div>
-                </CardContent>
-              </Card>
+              <div className="p-6 bg-muted/50 rounded-lg border-2 border-muted">
+                <div className="prose dark:prose-invert max-w-none">
+                  <p className="whitespace-pre-wrap text-base">{task.payload.text_content}</p>
+                </div>
+              </div>
+            )}
+
+            {task.payload.data_source === 'file' && attachments.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>Nenhum anexo disponível</p>
+              </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Ações de Aprovação */}
-        <Card>
+        {/* Seção 4: Anexos Adicionais (se houver anexos além do conteúdo principal) */}
+        {attachments.length > 0 && task.payload.data_source !== 'file' && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="w-5 h-5" />
+                Anexos Adicionais ({attachments.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <TaskAttachmentViewer attachments={attachments} />
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Seção 5: Decisão de Aprovação */}
+        <Card className="border-2 border-primary/20">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <MessageSquare className="w-5 h-5" />
@@ -276,9 +371,9 @@ export const TaskApprovalProcessor = () => {
                 : 'Adicione uma justificativa ou comentário (opcional)'}
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="justification">
+              <Label htmlFor="justification" className="text-base">
                 Justificativa / Comentários
                 {task.payload.require_justification && (
                   <span className="text-red-500 ml-1">*</span>
@@ -290,17 +385,19 @@ export const TaskApprovalProcessor = () => {
                 onChange={(e) => setJustification(e.target.value)}
                 placeholder="Digite sua justificativa ou comentários sobre a decisão..."
                 rows={4}
-                className="resize-none"
+                className="resize-none text-base"
               />
             </div>
 
-            <div className="flex items-center gap-3 pt-4">
+            <Separator />
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <Button
                 variant="default"
                 size="lg"
                 onClick={() => handleDecision('approved')}
                 disabled={processing || task.status === 'done'}
-                className="flex-1 bg-green-600 hover:bg-green-700"
+                className="bg-green-600 hover:bg-green-700 h-14 text-base font-semibold"
               >
                 <CheckCircle className="w-5 h-5 mr-2" />
                 Aprovar
@@ -311,7 +408,7 @@ export const TaskApprovalProcessor = () => {
                 size="lg"
                 onClick={() => handleDecision('correction_requested')}
                 disabled={processing || task.status === 'done'}
-                className="flex-1"
+                className="border-2 border-yellow-500 hover:bg-yellow-50 text-yellow-700 h-14 text-base font-semibold"
               >
                 <AlertCircle className="w-5 h-5 mr-2" />
                 Solicitar Correção
@@ -322,7 +419,7 @@ export const TaskApprovalProcessor = () => {
                 size="lg"
                 onClick={() => handleDecision('rejected')}
                 disabled={processing || task.status === 'done'}
-                className="flex-1"
+                className="h-14 text-base font-semibold"
               >
                 <XCircle className="w-5 h-5 mr-2" />
                 Rejeitar
@@ -331,7 +428,7 @@ export const TaskApprovalProcessor = () => {
           </CardContent>
         </Card>
 
-        {/* Histórico de Comentários */}
+        {/* Seção 6: Histórico e Comentários */}
         {comments.length > 0 && (
           <Card>
             <CardHeader>
@@ -343,13 +440,13 @@ export const TaskApprovalProcessor = () => {
             <CardContent>
               <div className="space-y-4">
                 {comments.map((comment) => (
-                  <div key={comment.id} className="flex gap-3 p-4 border rounded-lg">
+                  <div key={comment.id} className="flex gap-3 p-4 border rounded-lg hover:bg-muted/50 transition-colors">
                     <div className="flex-shrink-0">
                       <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                         <User className="w-5 h-5 text-primary" />
                       </div>
                     </div>
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
                         <p className="font-medium">{comment.author?.name}</p>
                         <span className="text-xs text-muted-foreground">
@@ -381,7 +478,7 @@ export const TaskApprovalProcessor = () => {
             <Textarea
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
-              placeholder="Adicione um comentário..."
+              placeholder="Adicione um comentário para registro..."
               rows={3}
             />
             <Button onClick={handleAddComment} disabled={!newComment.trim()}>

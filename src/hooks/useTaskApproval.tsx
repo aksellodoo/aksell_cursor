@@ -12,12 +12,20 @@ export interface TaskApprovalData {
   due_date: string | null;
   created_at: string;
   fixed_type: string;
+  weblink: string | null;
   payload: {
     data_source: 'file' | 'form' | 'text';
     file_id?: string;
     form_response_id?: string;
     text_content?: string;
     require_justification?: boolean;
+    approval_criteria?: string[];
+    expires_at?: string;
+    escalation?: {
+      after_hours: number;
+      to_user_ids: string[];
+    };
+    notify_on_assignment?: boolean;
   };
   created_by: string;
   assigned_to: string;
@@ -98,6 +106,10 @@ export const useTaskApproval = (taskId: string) => {
     try {
       setLoading(true);
 
+      // Debug logging
+      console.log('🔍 useTaskApproval - Fetching task with ID:', taskId);
+      console.log('🔍 useTaskApproval - Task ID length:', taskId?.length);
+
       // Buscar dados da tarefa com informações do criador e responsável
       const { data: taskData, error: taskError } = await supabase
         .from('tasks')
@@ -111,6 +123,7 @@ export const useTaskApproval = (taskId: string) => {
           created_at,
           fixed_type,
           payload,
+          weblink,
           created_by,
           assigned_to,
           creator:created_by(id, name, email, department),
@@ -119,32 +132,41 @@ export const useTaskApproval = (taskId: string) => {
         .eq('id', taskId)
         .single();
 
-      if (taskError) throw taskError;
-      if (!taskData) throw new Error('Tarefa não encontrada');
+      if (taskError) {
+        console.error('❌ useTaskApproval - Task error:', taskError);
+        console.error('❌ useTaskApproval - Attempted task ID:', taskId);
+        throw taskError;
+      }
+
+      if (!taskData) {
+        console.error('❌ useTaskApproval - No task data returned');
+        throw new Error('Tarefa não encontrada');
+      }
+
+      console.log('✅ useTaskApproval - Task data loaded:', taskData);
 
       setTask(taskData as any);
 
       const payload = taskData.payload as any;
 
-      // Buscar anexos se data_source for "file"
-      if (payload?.data_source === 'file') {
-        const { data: attachmentsData, error: attachmentsError } = await supabase
-          .from('task_attachments')
-          .select(`
-            id,
-            task_id,
-            file_name,
-            file_path,
-            file_size,
-            file_type,
-            uploaded_by,
-            uploaded_at,
-            uploader:uploaded_by(name, email)
-          `)
-          .eq('task_id', taskId)
-          .order('uploaded_at', { ascending: false });
+      // Buscar TODOS os anexos da tarefa (independente do data_source)
+      const { data: attachmentsData, error: attachmentsError } = await supabase
+        .from('task_attachments')
+        .select(`
+          id,
+          task_id,
+          file_name,
+          file_path,
+          file_size,
+          file_type,
+          uploaded_by,
+          uploaded_at,
+          uploader:uploaded_by(name, email)
+        `)
+        .eq('task_id', taskId)
+        .order('uploaded_at', { ascending: false});
 
-        if (attachmentsError) throw attachmentsError;
+      if (!attachmentsError) {
         setAttachments(attachmentsData as any || []);
       }
 

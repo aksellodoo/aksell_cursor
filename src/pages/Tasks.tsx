@@ -44,12 +44,27 @@ export const Tasks = () => {
   };
 
   const handleProcessTask = (task: any) => {
+    // Debug logging
+    console.log('🔍 Processing task:', task);
+    console.log('🔍 Task ID:', task.id);
+    console.log('🔍 Task ID length:', task.id?.length);
+    console.log('🔍 Task fixed_type:', task.fixed_type);
+
+    // Validar UUID (deve ter 36 caracteres)
+    if (!task.id || task.id.length !== 36) {
+      toast.error(`ID da tarefa inválido: ${task.id || 'undefined'} (comprimento: ${task.id?.length || 0})`);
+      console.error('❌ Invalid task ID:', task);
+      return;
+    }
+
     // Verificar se é uma tarefa de aprovação
     if (task.fixed_type === 'approval') {
-      navigate(`/tasks/${task.id}/process-approval`);
+      const url = `/tasks/${task.id}/process-approval`;
+      console.log('🔍 Navigating to:', url);
+      navigate(url);
     } else {
-      // Para outros tipos, navegar para edição
-      navigate(`/tasks/${task.id}/edit`);
+      // Para outros tipos, navegar para edição (se implementado no futuro)
+      toast.info('Edição de tarefa em desenvolvimento');
     }
   };
 

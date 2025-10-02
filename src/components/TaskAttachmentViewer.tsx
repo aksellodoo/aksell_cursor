@@ -96,89 +96,74 @@ export const TaskAttachmentViewer = ({ attachments }: TaskAttachmentViewerProps)
 
   if (attachments.length === 0) {
     return (
-      <Card>
-        <CardContent className="pt-6">
-          <div className="text-center py-8 text-muted-foreground">
-            <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p>Nenhum anexo disponível</p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="text-center py-8 text-muted-foreground">
+        <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
+        <p>Nenhum anexo disponível</p>
+      </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      {/* Lista de Anexos */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="w-5 h-5" />
-            Anexos ({attachments.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {attachments.map((attachment) => {
-              const FileIcon = getFileIcon(attachment.file_type);
-              return (
-                <div
-                  key={attachment.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                >
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <FileIcon className="w-8 h-8 text-primary flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <p className="font-medium truncate">{attachment.file_name}</p>
-                        <Badge variant="secondary" className="flex-shrink-0">
-                          {getFileTypeLabel(attachment.file_type)}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                        <span>{formatFileSize(attachment.file_size)}</span>
-                        <span>•</span>
-                        <span>
-                          Enviado por {attachment.uploader?.name || 'Usuário'}
-                        </span>
-                        <span>•</span>
-                        <span>
-                          {format(new Date(attachment.uploaded_at), 'dd/MM/yyyy HH:mm', {
-                            locale: ptBR
-                          })}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 ml-4">
-                    {(attachment.file_type.startsWith('image/') ||
-                      attachment.file_type === 'application/pdf') && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handlePreview(attachment)}
-                      >
-                        <ExternalLink className="w-4 h-4 mr-1" />
-                        Visualizar
-                      </Button>
-                    )}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDownload(attachment)}
-                      disabled={downloadingId === attachment.id}
-                    >
-                      <Download className="w-4 h-4 mr-1" />
-                      {downloadingId === attachment.id ? 'Baixando...' : 'Baixar'}
-                    </Button>
-                  </div>
+    <div className="space-y-3">
+      {attachments.map((attachment) => {
+        const FileIcon = getFileIcon(attachment.file_type);
+        return (
+          <div
+            key={attachment.id}
+            className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border-2 rounded-lg hover:bg-muted/30 transition-colors gap-4"
+          >
+            <div className="flex items-start gap-3 flex-1 min-w-0 w-full sm:w-auto">
+              <FileIcon className="w-10 h-10 text-primary flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <p className="font-semibold truncate text-base">{attachment.file_name}</p>
+                  <Badge variant="secondary" className="flex-shrink-0">
+                    {getFileTypeLabel(attachment.file_type)}
+                  </Badge>
                 </div>
-              );
-            })}
+                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                  <span className="font-medium">{formatFileSize(attachment.file_size)}</span>
+                  <span className="hidden sm:inline">•</span>
+                  <span className="truncate">
+                    Enviado por {attachment.uploader?.name || 'Usuário'}
+                  </span>
+                  <span className="hidden sm:inline">•</span>
+                  <span className="whitespace-nowrap">
+                    {format(new Date(attachment.uploaded_at), 'dd/MM/yyyy HH:mm', {
+                      locale: ptBR
+                    })}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              {(attachment.file_type.startsWith('image/') ||
+                attachment.file_type === 'application/pdf') && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePreview(attachment)}
+                  className="flex-1 sm:flex-initial"
+                >
+                  <ExternalLink className="w-4 h-4 mr-1" />
+                  Visualizar
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleDownload(attachment)}
+                disabled={downloadingId === attachment.id}
+                className="flex-1 sm:flex-initial"
+              >
+                <Download className="w-4 h-4 mr-1" />
+                {downloadingId === attachment.id ? 'Baixando...' : 'Baixar'}
+              </Button>
+            </div>
           </div>
-        </CardContent>
-      </Card>
+        );
+      })}
 
       {/* Preview Modal */}
       {previewUrl && (
