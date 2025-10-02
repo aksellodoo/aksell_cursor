@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -71,7 +71,6 @@ export const TaskEditorFullscreen: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<1 | 2>(urlFixedType ? 2 : 1);
   const [selectedFixedType, setSelectedFixedType] = useState<FixedTaskType | null>(urlFixedType || null);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(urlTemplateId || null);
-  const [payloadValid, setPayloadValid] = useState(true);
   const [showTemplateDrawer, setShowTemplateDrawer] = useState(false);
   const [selectedAttachments, setSelectedAttachments] = useState<Array<{id: string, name: string}>>([]);
   const [showAttachmentsSelection, setShowAttachmentsSelection] = useState(false);
@@ -182,71 +181,46 @@ export const TaskEditorFullscreen: React.FC = () => {
     }
   }, [selectedFixedType, selectedAttachments, watchedValues.payload?.data_source, setValue]);
 
-  // Validate payload - incluindo file_id auto-preenchido para approval
-  useEffect(() => {
-    if (selectedFixedType) {
-      // Para approval com data_source 'file', incluir file_id se houver anexo selecionado
-      let payloadToValidate = { ...(watchedValues.payload || {}) };
+  // Validate payload - using useMemo for reactive validation
+  const payloadValid = useMemo(() => {
+    if (!selectedFixedType) return false;
 
-      if (selectedFixedType === 'approval' && payloadToValidate.data_source === 'text') {
-        payloadToValidate.text_content = payloadToValidate.text_content?.trim?.();
-      }
+    // Para approval com data_source 'file', incluir file_id se houver anexo selecionado
+    let payloadToValidate = { ...(watchedValues.payload || {}) };
 
-      // Debug: mostrar estado atual
-      console.log('🔍 Validation debug:', {
-        selectedFixedType,
-        payloadExists: !!watchedValues.payload,
-        dataSource: payloadToValidate.data_source,
-        fileId: payloadToValidate.file_id,
-        attachmentsCount: selectedAttachments.length,
-        firstAttachmentId: selectedAttachments[0]?.id
-      });
-      
-      if (selectedFixedType === 'approval' && 
-          payloadToValidate.data_source === 'file' && 
-          selectedAttachments.length > 0) {
-        // Sempre usar o primeiro anexo como file_id
-        payloadToValidate.file_id = selectedAttachments[0].id;
-        console.log('🔗 Auto-setting file_id:', payloadToValidate.file_id);
-      }
-      
-      const validation = validateTaskPayload(selectedFixedType, payloadToValidate);
-      console.log('🔍 Payload validation result:', {
-        fixedType: selectedFixedType,
-        originalPayload: watchedValues.payload,
-        validatedPayload: payloadToValidate,
-        validation: validation,
-        success: validation.success,
-        errors: validation.errors
-      });
-      setPayloadValid(validation.success);
-    } else {
-      setPayloadValid(false);
+    if (selectedFixedType === 'approval' && payloadToValidate.data_source === 'text') {
+      payloadToValidate.text_content = payloadToValidate.text_content?.trim?.();
     }
-  }, [selectedFixedType, watchedValues.payload, selectedAttachments]);
 
-  // Revalidar quando a aba volta a ficar ativa (fix para problema de tab refresh)
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (!document.hidden && selectedFixedType && watchedValues.payload) {
-        console.log('🔄 Tab became active, revalidating payload...');
-        // Força revalidação quando a aba volta a ficar ativa
-        let payloadToValidate = { ...watchedValues.payload };
-        
-        if (selectedFixedType === 'approval' && 
-            payloadToValidate.data_source === 'file' && 
-            selectedAttachments.length > 0 && 
-            !payloadToValidate.file_id) {
-          payloadToValidate.file_id = selectedAttachments[0].id;
-        }
-        
-        const validation = validateTaskPayload(selectedFixedType, payloadToValidate);
-        setPayloadValid(validation.success);
-      }
-    };
+    // Debug: mostrar estado atual
+    console.log('🔍 Validation debug:', {
+      selectedFixedType,
+      payloadExists: !!watchedValues.payload,
+      dataSource: payloadToValidate.data_source,
+      fileId: payloadToValidate.file_id,
+      formResponseId: payloadToValidate.form_response_id,
+      attachmentsCount: selectedAttachments.length,
+      firstAttachmentId: selectedAttachments[0]?.id
+    });
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    if (selectedFixedType === 'approval' &&
+        payloadToValidate.data_source === 'file' &&
+        selectedAttachments.length > 0) {
+      // Sempre usar o primeiro anexo como file_id
+      payloadToValidate.file_id = selectedAttachments[0].id;
+      console.log('🔗 Auto-setting file_id:', payloadToValidate.file_id);
+    }
+
+    const validation = validateTaskPayload(selectedFixedType, payloadToValidate);
+    console.log('🔍 Payload validation result:', {
+      fixedType: selectedFixedType,
+      originalPayload: watchedValues.payload,
+      validatedPayload: payloadToValidate,
+      validation: validation,
+      success: validation.success,
+      errors: validation.errors
+    });
+    return validation.success;
   }, [selectedFixedType, watchedValues.payload, selectedAttachments]);
 
   // Keyboard shortcuts

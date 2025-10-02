@@ -30,6 +30,8 @@ export const FormResultsList = ({ onViewResults }: FormResultsListProps) => {
         return <Badge variant="secondary">Externo</Badge>;
       case 'published_mixed':
         return <Badge variant="outline">Misto</Badge>;
+      case 'task_usage':
+        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300">Uso em Tarefas</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }

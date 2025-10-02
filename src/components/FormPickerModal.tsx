@@ -6,11 +6,12 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, FileText, FilePlus, Plus, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { Search, FileText, FilePlus, Plus, CheckCircle, Clock, AlertCircle, Eye } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { FilledFormViewer } from '@/components/FilledFormViewer';
 
 interface Form {
   id: string;
@@ -46,6 +47,7 @@ export const FormPickerModal: React.FC<FormPickerModalProps> = ({
   const [myResponses, setMyResponses] = useState<FormResponse[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [viewingResponse, setViewingResponse] = useState<{form: Form; response: FormResponse} | null>(null);
 
   const fetchForms = useCallback(async () => {
     try {
@@ -151,6 +153,18 @@ export const FormPickerModal: React.FC<FormPickerModalProps> = ({
   };
 
 
+  // If viewing a response, show the filled form viewer
+  if (viewingResponse) {
+    return (
+      <FilledFormViewer
+        form={viewingResponse.form}
+        responseData={viewingResponse.response.response_data}
+        response={viewingResponse.response}
+        onClose={() => setViewingResponse(null)}
+      />
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
@@ -253,18 +267,29 @@ export const FormPickerModal: React.FC<FormPickerModalProps> = ({
 
                         {/* Botão Selecionar Existente (se houver respostas) */}
                         {latestResponse && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleSelectExistingResponse(latestResponse, form)}
-                            className="flex items-center gap-2"
-                          >
-                            <CheckCircle className="h-4 w-4" />
-                            Usar Última Resposta
-                            <span className="text-xs text-muted-foreground ml-1">
-                              ({format(new Date(latestResponse.submitted_at), 'dd/MM/yy', { locale: ptBR })})
-                            </span>
-                          </Button>
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setViewingResponse({ form, response: latestResponse })}
+                              className="flex items-center gap-2"
+                            >
+                              <Eye className="h-4 w-4" />
+                              Ver Preenchido
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleSelectExistingResponse(latestResponse, form)}
+                              className="flex items-center gap-2"
+                            >
+                              <CheckCircle className="h-4 w-4" />
+                              Usar Última Resposta
+                              <span className="text-xs text-muted-foreground ml-1">
+                                ({format(new Date(latestResponse.submitted_at), 'dd/MM/yy', { locale: ptBR })})
+                              </span>
+                            </Button>
+                          </>
                         )}
                       </div>
 

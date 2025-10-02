@@ -106,7 +106,7 @@ export const FormsToFillList = ({
     }
     
     // Abrir formulário para preenchimento interno (usuários autenticados)
-    window.open(`/formularios/${form.id}/preencher`, '_blank');
+    window.open(`/formularios/${form.id}/fill`, '_blank');
   };
 
   const handleScopeChange = (scope: 'my_forms' | 'team_forms') => {

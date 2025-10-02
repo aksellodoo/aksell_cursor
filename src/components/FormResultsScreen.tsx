@@ -19,6 +19,7 @@ import {
 import { useFormResults, FormResponseWithUser } from '@/hooks/useFormResults';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ResponseDetailModal } from '@/components/ResponseDetailModal';
+import { FilledFormViewer } from '@/components/FilledFormViewer';
 
 interface FormResultsScreenProps {
   formId: string;
@@ -29,6 +30,7 @@ export const FormResultsScreen = ({ formId, onClose }: FormResultsScreenProps) =
   const { form, responses, analytics, loading, exportToCSV } = useFormResults(formId);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedResponse, setSelectedResponse] = useState<FormResponseWithUser | null>(null);
+  const [showFilledForm, setShowFilledForm] = useState<FormResponseWithUser | null>(null);
 
   const filteredResponses = responses.filter(response => 
     response.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -215,14 +217,24 @@ export const FormResultsScreen = ({ formId, onClose }: FormResultsScreenProps) =
                           </div>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setSelectedResponse(response)}
-                          >
-                            <Eye className="w-4 h-4" />
-                            Ver Detalhes
-                          </Button>
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setSelectedResponse(response)}
+                            >
+                              <Eye className="w-4 h-4 mr-1" />
+                              Ver Detalhes
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setShowFilledForm(response)}
+                            >
+                              <FileText className="w-4 h-4 mr-1" />
+                              Ver Formulário
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -240,6 +252,16 @@ export const FormResultsScreen = ({ formId, onClose }: FormResultsScreenProps) =
           response={selectedResponse}
           form={form}
           onClose={() => setSelectedResponse(null)}
+        />
+      )}
+
+      {/* Filled Form Viewer */}
+      {showFilledForm && (
+        <FilledFormViewer
+          form={form}
+          responseData={showFilledForm.response_data}
+          response={showFilledForm}
+          onClose={() => setShowFilledForm(null)}
         />
       )}
     </div>

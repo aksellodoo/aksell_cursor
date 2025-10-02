@@ -48,7 +48,7 @@ export const useFormResultsAccess = () => {
           allowed_roles,
           has_responses
         `)
-        .in('publication_status', ['published_internal', 'published_external', 'published_mixed']);
+        .in('publication_status', ['published_internal', 'published_external', 'published_mixed', 'task_usage']);
 
       if (formsError) {
         console.error('Error fetching forms:', formsError);
@@ -60,27 +60,45 @@ export const useFormResultsAccess = () => {
         return;
       }
 
+      // Buscar formulários que o usuário respondeu
+      const { data: userResponses, error: responsesError } = await supabase
+        .from('form_responses')
+        .select('form_id')
+        .eq('submitted_by', user.id);
+
+      const respondedFormIds = new Set(userResponses?.map(r => r.form_id) || []);
+
       // Filtrar formulários baseado em permissões de confidencialidade
       const accessibleForms = formsData.filter(form => {
-        // Se é o criador do formulário, sempre tem acesso
+        // 1. Se é o criador do formulário, sempre tem acesso
         if (form.created_by === user.id) {
           return true;
         }
 
-        // Verificar confidencialidade
+        // 2. Se é formulário de uso em tarefas E o usuário respondeu, tem acesso
+        if (form.publication_status === 'task_usage' && respondedFormIds.has(form.id)) {
+          return true;
+        }
+
+        // 3. Se o usuário respondeu ao formulário, tem acesso
+        if (respondedFormIds.has(form.id)) {
+          return true;
+        }
+
+        // 4. Verificar confidencialidade (para formulários públicos)
         switch (form.confidentiality_level) {
           case 'public':
             return true;
-          
+
           case 'department_leaders':
-            return profile.is_leader || 
-                   profile.role === 'director' || 
-                   profile.role === 'admin' || 
+            return profile.is_leader ||
+                   profile.role === 'director' ||
+                   profile.role === 'admin' ||
                    profile.role === 'hr';
-          
+
           case 'directors_admins':
             return profile.role === 'director' || profile.role === 'admin';
-          
+
           default:
             return false;
         }

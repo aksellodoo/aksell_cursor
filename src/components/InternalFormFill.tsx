@@ -26,31 +26,36 @@ export const InternalFormFill = () => {
 
     // Verificar se o usuário tem permissão para preencher este formulário
     const checkPermission = () => {
-      // Verificar recipients internos
+      // Se for formulário para uso em tarefas, permitir para qualquer usuário autenticado
+      if (form.status === 'task_usage' || form.publication_status === 'task_usage') {
+        return true;
+      }
+
+      // Verificar recipients internos (para formulários publicados)
       const internalRecipients = form.internal_recipients || {};
-      
+
       // Verificar se está nos usuários específicos
       if (internalRecipients.users && internalRecipients.users.includes(user.id)) {
         return true;
       }
-      
+
       // Verificar se está no departamento
-      if (internalRecipients.departments && profile.department_id && 
+      if (internalRecipients.departments && profile.department_id &&
           internalRecipients.departments.includes(profile.department_id)) {
         return true;
       }
-      
+
       // Verificar se está nos roles
-      if (internalRecipients.roles && profile.role && 
+      if (internalRecipients.roles && profile.role &&
           internalRecipients.roles.includes(profile.role)) {
         return true;
       }
-      
+
       // Verificar se é "todos os usuários"
       if (internalRecipients.all_users) {
         return true;
       }
-      
+
       return false;
     };
 
@@ -68,9 +73,18 @@ export const InternalFormFill = () => {
         response_data: formData,
         submitted_at: new Date().toISOString()
       });
-      
+
       toast.success('Formulário enviado com sucesso!');
-      navigate('/formularios');
+
+      // Se foi aberto em nova aba (window.opener existe), fechar a aba
+      if (window.opener) {
+        setTimeout(() => {
+          window.close();
+        }, 1500); // Delay para mostrar o toast de sucesso
+      } else {
+        // Se foi aberto na mesma aba, navegar para /formularios
+        navigate('/formularios');
+      }
     } catch (error) {
       console.error('Erro ao enviar formulário:', error);
       toast.error('Erro ao enviar formulário');

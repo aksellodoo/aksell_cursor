@@ -1,9 +1,12 @@
+import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Calendar, User, Mail, Building, Monitor, MapPin } from 'lucide-react';
+import { Calendar, User, Mail, Building, Monitor, MapPin, FileText } from 'lucide-react';
 import { FormResponseWithUser } from '@/hooks/useFormResults';
+import { FilledFormViewer } from './FilledFormViewer';
 
 interface ResponseDetailModalProps {
   response: FormResponseWithUser;
@@ -12,6 +15,8 @@ interface ResponseDetailModalProps {
 }
 
 export const ResponseDetailModal = ({ response, form, onClose }: ResponseDetailModalProps) => {
+  const [showFilledForm, setShowFilledForm] = useState(false);
+
   const renderFieldValue = (fieldId: string, value: any, fieldDefinition?: any) => {
     if (value === null || value === undefined || value === '') {
       return <span className="text-muted-foreground italic">Não preenchido</span>;
@@ -52,11 +57,34 @@ export const ResponseDetailModal = ({ response, form, onClose }: ResponseDetailM
     return form?.fields_definition?.find((f: any) => f.id === fieldId);
   };
 
+  // Se o formulário preenchido está sendo visualizado, renderizar o FilledFormViewer
+  if (showFilledForm) {
+    return (
+      <FilledFormViewer
+        form={form}
+        responseData={response.response_data}
+        response={response}
+        onClose={() => setShowFilledForm(false)}
+      />
+    );
+  }
+
   return (
     <Dialog open={true} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Detalhes da Resposta</DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle>Detalhes da Resposta</DialogTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowFilledForm(true)}
+              className="gap-2"
+            >
+              <FileText className="w-4 h-4" />
+              Ver Formulário Preenchido
+            </Button>
+          </div>
         </DialogHeader>
 
         <div className="space-y-6">
