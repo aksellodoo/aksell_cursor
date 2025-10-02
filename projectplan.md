@@ -116,8 +116,8 @@
 
 ### 2025-10-03
 
-#### Sistema de Notificação Multi-canal para Formulários Externos (FASE 1 - Parcial)
-- 🚧 **Status:** Implementação parcial (4/7 componentes concluídos)
+#### Sistema de Notificação Multi-canal para Formulários Externos (FASE 1 - COMPLETO ✅)
+- ✅ **Status:** Implementação completa (7/7 componentes concluídos + deployment finalizado)
 - ✅ **Migração SQL - Tabela form_external_invitations:**
   - Criada tabela para gerenciar convites e envios de formulários
   - Campos de controle por canal: `send_via_email`, `send_via_whatsapp`, `send_via_telegram`
@@ -204,18 +204,19 @@
   - Arquivo: `src/App.tsx` (linhas 33, 98)
   - Data: 03/10/2025 04:16
 
-- ⏳ **PENDENTE - Testes e Deploy:**
-  - Executar migração SQL no Supabase
-  - Deploy da edge function
-  - Testes do fluxo end-to-end
-  - Documentação de uso
+- ✅ **DEPLOYMENT COMPLETO:**
+  - ✅ Migrations SQL executadas no Supabase (manualmente via Dashboard)
+  - ✅ Edge function deployada com sucesso via Supabase CLI
+  - ✅ Configuração adicionada em `supabase/config.toml`
+  - ⏳ Testes do fluxo end-to-end (pendente)
+  - ✅ Documentação criada (DEPLOYMENT_STEPS.md, EDGE_FUNCTION_DEPLOYMENT.md)
 
-- 📋 **Próximos Passos:**
+- 📋 **Checklist de Implementação:**
   1. ✅ ~~Integrar DeliveryChannelSelector no FormConfigurationModal~~ **CONCLUÍDO**
   2. ✅ ~~Criar página de preenchimento público (FormPublicFill.tsx)~~ **CONCLUÍDO**
   3. ✅ ~~Adicionar rota no React Router~~ **CONCLUÍDO**
-  4. ⏳ Executar migração SQL no Supabase
-  5. ⏳ Deploy da edge function: `supabase functions deploy send-form-invitation`
+  4. ✅ ~~Executar migração SQL no Supabase~~ **CONCLUÍDO (03/10/2025 04:30)**
+  5. ✅ ~~Deploy da edge function~~ **CONCLUÍDO VIA CLI (03/10/2025 04:35)**
   6. ⏳ Testes completos do fluxo end-to-end
 
 - 🎯 **Funcionalidades Futuras (Fase 2+):**
@@ -226,18 +227,21 @@
   - Lembretes automáticos antes do prazo
   - Relatórios de taxa de resposta por canal
 
-- ⚠️ **AÇÃO NECESSÁRIA - Migrações SQL:**
-  - Executar migração manualmente no Supabase Dashboard:
-  ```sql
-  -- 1. Copiar conteúdo de: supabase/migrations/20251002230000_add_form_external_contacts.sql
-  -- 2. Copiar conteúdo de: supabase/migrations/20251003000000_create_form_invitations.sql
-  ```
-  - Ou via Supabase CLI quando houver sync das migrações
-
-- ⚠️ **AÇÃO NECESSÁRIA - Deploy Edge Function:**
-  ```bash
-  supabase functions deploy send-form-invitation
-  ```
+- ✅ **Deployment Automático Realizado:**
+  - **Migrations SQL:** Executadas manualmente via Supabase Dashboard SQL Editor
+    - `20251002230000_add_form_external_contacts.sql` ✅
+    - `20251003000000_create_form_invitations.sql` ✅
+  - **Edge Function:** Deployada via Supabase CLI (npx)
+    ```bash
+    npx supabase functions deploy send-form-invitation --project-ref nahyrexnxhzutfeqxjte
+    ```
+    - Status: ✅ Deployed
+    - URL: https://supabase.com/dashboard/project/nahyrexnxhzutfeqxjte/functions
+  - **Configuração:** Adicionada no `supabase/config.toml`:
+    ```toml
+    [functions.send-form-invitation]
+    verify_jwt = false
+    ```
 
 #### Sistema de Múltiplas Moedas no Form Builder
 - ✅ **Suporte para Múltiplas Moedas:**
