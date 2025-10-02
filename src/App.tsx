@@ -27,6 +27,7 @@ import Transportadoras from "./pages/Transportadoras";
 import SolicitarAcesso from "./pages/SolicitarAcesso";
 import { Tasks } from "./pages/Tasks";
 import { TaskEditorFullscreen } from "./pages/TaskEditorFullscreen";
+import { TaskApprovalProcessor } from "./pages/TaskApprovalProcessor";
 import { Forms } from "./pages/Forms";
 import { Automacoes } from "./pages/Automacoes";
 import FormBuilderFullScreen from "./components/FormBuilderFullScreen";
@@ -93,6 +94,7 @@ const App = () => (
                 {/* Gestão de Tarefas */}
                 <Route path="/tasks" element={<AppLayout><Tasks /></AppLayout>} />
                 <Route path="/tasks/new" element={<TaskEditorFullscreen />} />
+                <Route path="/tasks/:taskId/process-approval" element={<TaskApprovalProcessor />} />
                 <Route path="/formularios" element={<AppLayout><Forms /></AppLayout>} />
                 <Route path="/formularios/builder" element={<AppLayout><FormBuilderFullScreen /></AppLayout>} />
                 <Route path="/formularios/:id/editar" element={<AppLayout><FormBuilderFullScreen /></AppLayout>} />

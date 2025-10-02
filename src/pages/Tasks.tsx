@@ -44,8 +44,13 @@ export const Tasks = () => {
   };
 
   const handleProcessTask = (task: any) => {
-    // Navegar para a tela de processamento da tarefa
-    navigate(`/tasks/${task.id}/edit`);
+    // Verificar se é uma tarefa de aprovação
+    if (task.fixed_type === 'approval') {
+      navigate(`/tasks/${task.id}/process-approval`);
+    } else {
+      // Para outros tipos, navegar para edição
+      navigate(`/tasks/${task.id}/edit`);
+    }
   };
 
   const handleCreateTemplateSuccess = () => {
