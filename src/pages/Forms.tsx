@@ -187,7 +187,7 @@ export const Forms = () => {
         description: 'Nenhum formulário selecionado',
         variant: 'destructive'
       });
-      return;
+      return null;
     }
 
     try {
@@ -197,14 +197,14 @@ export const Forms = () => {
 
       // Verificar se está publicando
       const isPublished = config.status && (
-        config.status === 'published_internal' || 
-        config.status === 'published_external' || 
+        config.status === 'published_internal' ||
+        config.status === 'published_external' ||
         config.status === 'published_mixed'
       );
 
       console.log('Is Published:', isPublished);
 
-      // Preparar dados básicos para a tabela forms (SEM external_recipients)
+      // Preparar dados básicos para a tabela forms COM external_contact_ids
       const updateData = {
         title: config.title || selectedForm.title,
         description: config.description || selectedForm.description,
@@ -231,48 +231,53 @@ export const Forms = () => {
         allowed_users: config.access_selection?.specificUsers || [],
         allowed_departments: config.access_selection?.departmentSelections || [],
         allowed_roles: config.access_selection?.roleSelections || [],
+        external_contact_ids: config.external_contact_ids || [],
       };
 
       console.log('=== DADOS PARA ATUALIZAÇÃO ===');
       console.log('UpdateData:', updateData);
-      
+
       // Atualizar campos básicos primeiro
       const result = await updateForm(selectedForm.id, updateData);
-      
+
       if (result) {
         console.log('=== SALVAMENTO BÁSICO CONCLUÍDO ===');
-        
-        // Se for uma publicação, processar external_recipients separadamente
-        if (isPublished && config.external_recipients && config.external_recipients.length > 0) {
-          console.log('=== PROCESSANDO DESTINATÁRIOS EXTERNOS ===');
-          console.log('External Recipients:', config.external_recipients);
-          
-          // TODO: Implementar salvamento na tabela form_external_recipients
-          // Por enquanto, apenas logar
-        }
-        
+
         toast({
           title: isPublished ? 'Formulário publicado' : 'Configurações salvas',
-          description: isPublished 
-            ? 'O formulário foi publicado com sucesso.' 
+          description: isPublished
+            ? 'O formulário foi publicado com sucesso.'
             : 'As configurações do formulário foram atualizadas com sucesso.'
         });
-        
+
         await refetch();
-        setShowConfigModal(false);
-        setSelectedForm(null);
+
+        // Verificar se deve mostrar o seletor de canais
+        const hasExternalContacts = config.external_contact_ids && config.external_contact_ids.length > 0;
+        const allowsExternalDelivery = config.status === 'published_external' || config.status === 'published_mixed';
+
+        // Se NÃO precisa mostrar o seletor, fechar o modal
+        if (!hasExternalContacts || !allowsExternalDelivery) {
+          setShowConfigModal(false);
+          setSelectedForm(null);
+        }
+
+        // Retornar o formId para que o FormConfigurationModal possa usá-lo
+        return selectedForm.id;
       } else {
         throw new Error('Resultado nulo retornado do updateForm');
       }
     } catch (error) {
       console.error('=== ERRO NO SALVAMENTO ===');
       console.error('Error:', error);
-      
+
       toast({
         title: 'Erro ao salvar',
         description: `Falha ao salvar o formulário: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
         variant: 'destructive'
       });
+
+      return null;
     }
   };
 

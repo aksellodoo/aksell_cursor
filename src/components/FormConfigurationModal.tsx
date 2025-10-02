@@ -171,7 +171,7 @@ export const FormConfigurationModal = ({ isOpen, onClose, onSave, formId, form, 
     }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     console.log('=== FormConfigurationModal.handleSave INICIADO ===');
     console.log('Config atual:', config);
     console.log('Validation result:', validation);
@@ -222,24 +222,37 @@ export const FormConfigurationModal = ({ isOpen, onClose, onSave, formId, form, 
       is_published: ['published_internal', 'published_external', 'published_mixed', 'task_usage'].includes(config.status),
       published_at: ['published_internal', 'published_external', 'published_mixed', 'task_usage'].includes(config.status)
         ? (form?.published_at || new Date().toISOString())
-        : null
+        : null,
+
+      // Adicionar external_contact_ids
+      external_contact_ids: config.external_contact_ids
     };
 
     console.log('=== DADOS PREPARADOS PARA SALVAMENTO ===');
     console.log('FormData que será enviado:', formData);
     console.log('Status final:', formData.status);
     console.log('Publication status final:', formData.publication_status);
+    console.log('External contact IDs:', formData.external_contact_ids);
 
-    // NOTA: external_recipients será tratado separadamente na tabela form_external_recipients
-    onSave(formData);
+    // Executar onSave e aguardar o formId retornado
+    const returnedFormId = await onSave(formData);
+
+    console.log('FormId retornado do onSave:', returnedFormId);
 
     // Se há contatos externos selecionados e o status permite envio externo, mostrar seletor de canais
     const hasExternalContacts = config.external_contact_ids && config.external_contact_ids.length > 0;
     const allowsExternalDelivery = config.status === 'published_external' || config.status === 'published_mixed';
 
-    if (hasExternalContacts && allowsExternalDelivery) {
-      setSavedFormId(formId || null);
+    if (hasExternalContacts && allowsExternalDelivery && returnedFormId) {
+      console.log('Abrindo DeliveryChannelSelector com formId:', returnedFormId);
+      setSavedFormId(returnedFormId);
       setShowDeliverySelector(true);
+    } else {
+      console.log('Não abrindo DeliveryChannelSelector:', {
+        hasExternalContacts,
+        allowsExternalDelivery,
+        returnedFormId
+      });
     }
   };
 
@@ -921,7 +934,11 @@ export const FormConfigurationModal = ({ isOpen, onClose, onSave, formId, form, 
       {showDeliverySelector && savedFormId && config.external_contact_ids && (
         <DeliveryChannelSelector
           isOpen={showDeliverySelector}
-          onClose={() => setShowDeliverySelector(false)}
+          onClose={() => {
+            setShowDeliverySelector(false);
+            // Fechar também o modal de configuração quando cancelar
+            onClose();
+          }}
           contacts={contacts.filter(c => config.external_contact_ids?.includes(c.id))}
           formId={savedFormId}
           formTitle={config.title}
@@ -933,6 +950,9 @@ export const FormConfigurationModal = ({ isOpen, onClose, onSave, formId, form, 
             setShowDeliverySelector(false);
             if (success) {
               toast.success('Convites enviados com sucesso!');
+              onClose();
+            } else {
+              // Se falhou, fechar também
               onClose();
             }
           }}
