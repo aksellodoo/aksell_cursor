@@ -5,8 +5,10 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Trash2, Plus, Mail, User, Key, Edit } from 'lucide-react';
+import { Trash2, Plus, Mail, User, Key, Edit, Users } from 'lucide-react';
 import { toast } from 'sonner';
+import { ContactsPickerModal } from './ContactsPickerModal';
+import { useContacts, Contact } from '@/hooks/useContacts';
 
 interface ExternalRecipient {
   name: string;
@@ -14,17 +16,32 @@ interface ExternalRecipient {
 }
 
 interface ExternalRecipientsManagerProps {
-  recipients: ExternalRecipient[];
-  onChange: (recipients: ExternalRecipient[]) => void;
+  mode?: 'manual' | 'contacts';
+  recipients?: ExternalRecipient[];
+  selectedContactIds?: string[];
+  onChange?: (recipients: ExternalRecipient[]) => void;
+  onContactsChange?: (contactIds: string[]) => void;
 }
 
-export const ExternalRecipientsManager = ({ recipients, onChange }: ExternalRecipientsManagerProps) => {
+export const ExternalRecipientsManager = ({
+  mode = 'manual',
+  recipients = [],
+  selectedContactIds = [],
+  onChange,
+  onContactsChange
+}: ExternalRecipientsManagerProps) => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isContactsPickerOpen, setIsContactsPickerOpen] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [newRecipient, setNewRecipient] = useState<ExternalRecipient>({
     name: '',
     email: ''
   });
+
+  const { contacts } = useContacts();
+
+  // Get selected contacts data
+  const selectedContacts = contacts.filter(c => selectedContactIds.includes(c.id));
 
 
   const validateRecipient = (recipient: ExternalRecipient) => {
@@ -123,6 +140,98 @@ export const ExternalRecipientsManager = ({ recipients, onChange }: ExternalReci
     input.click();
   };
 
+  const handleRemoveContact = (contactId: string) => {
+    if (onContactsChange) {
+      onContactsChange(selectedContactIds.filter(id => id !== contactId));
+      toast.success('Contato removido');
+    }
+  };
+
+  // Mode: Contacts
+  if (mode === 'contacts') {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <Label className="text-base font-medium">Usuários Externos</Label>
+            <p className="text-sm text-muted-foreground">
+              Selecione contatos da sua base para receberem acesso ao formulário
+            </p>
+          </div>
+          <Button size="sm" onClick={() => setIsContactsPickerOpen(true)}>
+            <Users className="w-4 h-4 mr-2" />
+            Adicionar Usuários Externos
+          </Button>
+        </div>
+
+        {selectedContacts.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-8">
+              <Users className="w-8 h-8 text-muted-foreground mb-2" />
+              <p className="text-muted-foreground text-center">
+                Nenhum usuário externo selecionado.<br />
+                Use o botão "Adicionar Usuários Externos" para selecionar contatos.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-2">
+            <Badge variant="secondary">
+              {selectedContacts.length} usuário{selectedContacts.length !== 1 ? 's' : ''} selecionado{selectedContacts.length !== 1 ? 's' : ''}
+            </Badge>
+
+            <div className="grid gap-2 max-h-60 overflow-y-auto">
+              {selectedContacts.map((contact) => (
+                <Card key={contact.id} className="p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                        <User className="w-4 h-4 text-primary" />
+                      </div>
+                      <div>
+                        <div className="font-medium text-sm">{contact.name}</div>
+                        <div className="text-xs text-muted-foreground flex items-center gap-1">
+                          {contact.email_primary ? (
+                            <>
+                              <Mail className="w-3 h-3" />
+                              {contact.email_primary}
+                            </>
+                          ) : (
+                            <span className="text-orange-600">Sem email cadastrado</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRemoveContact(contact.id)}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <ContactsPickerModal
+          isOpen={isContactsPickerOpen}
+          onClose={() => setIsContactsPickerOpen(false)}
+          selectedContactIds={selectedContactIds}
+          onSelect={(ids) => {
+            if (onContactsChange) {
+              onContactsChange(ids);
+            }
+          }}
+        />
+      </div>
+    );
+  }
+
+  // Mode: Manual (original behavior)
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">

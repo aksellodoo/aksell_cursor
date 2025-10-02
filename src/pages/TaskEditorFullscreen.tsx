@@ -20,8 +20,9 @@ import { useToast } from '@/hooks/use-toast';
 import { TaskTypePicker } from '@/components/TaskTypePicker';
 import { TemplatePickerDrawer } from '@/components/TemplatePickerDrawer';
 import { DocumentSelectionModal } from '@/components/DocumentSelectionModal';
+import { FormPickerModal } from '@/components/FormPickerModal';
 import { RecurrenceSection, type RecurrenceSettings } from '@/components/RecurrenceSection';
-import { Save, Clock, FileText, X, File, ArrowLeft, Plus } from 'lucide-react';
+import { Save, Clock, FileText, X, File, ArrowLeft, Plus, ExternalLink } from 'lucide-react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
@@ -39,6 +40,7 @@ const taskFormSchema = z.object({
   estimated_hours: z.number().min(0).optional(),
   tags: z.array(z.string()).default([]),
   payload: z.record(z.any()).default({}),
+  weblink: z.string().url('URL inválida').optional().or(z.literal('')),
 }).refine((data) => {
   if (data.expected_completion_at && data.deadline_at) {
     const expectedDate = new Date(data.expected_completion_at);
@@ -73,6 +75,8 @@ export const TaskEditorFullscreen: React.FC = () => {
   const [showTemplateDrawer, setShowTemplateDrawer] = useState(false);
   const [selectedAttachments, setSelectedAttachments] = useState<Array<{id: string, name: string}>>([]);
   const [showAttachmentsSelection, setShowAttachmentsSelection] = useState(false);
+  const [showFormPicker, setShowFormPicker] = useState(false);
+  const [selectedFormResponseTitle, setSelectedFormResponseTitle] = useState<string>('');
 
   const [localRecurrenceSettings, setLocalRecurrenceSettings] = useState<RecurrenceSettings>({
     enabled: false,
@@ -123,6 +127,8 @@ export const TaskEditorFullscreen: React.FC = () => {
   // Form management
   const form = useForm<TaskFormData>({
     resolver: zodResolver(taskFormSchema),
+    mode: 'onChange',
+    reValidateMode: 'onChange',
     defaultValues: {
       title: '',
       description: '',
@@ -181,7 +187,11 @@ export const TaskEditorFullscreen: React.FC = () => {
     if (selectedFixedType) {
       // Para approval com data_source 'file', incluir file_id se houver anexo selecionado
       let payloadToValidate = { ...(watchedValues.payload || {}) };
-      
+
+      if (selectedFixedType === 'approval' && payloadToValidate.data_source === 'text') {
+        payloadToValidate.text_content = payloadToValidate.text_content?.trim?.();
+      }
+
       // Debug: mostrar estado atual
       console.log('🔍 Validation debug:', {
         selectedFixedType,
@@ -479,10 +489,26 @@ export const TaskEditorFullscreen: React.FC = () => {
                 name="payload.form_response_id"
                 control={control}
                 render={({ field }) => (
-                  <Input 
-                    {...field} 
-                    placeholder="Selecione o formulário preenchido"
-                  />
+                  <div className="space-y-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowFormPicker(true)}
+                      className="w-full justify-start text-left font-normal"
+                    >
+                      <FileText className="mr-2 h-4 w-4" />
+                      {field.value && selectedFormResponseTitle
+                        ? selectedFormResponseTitle
+                        : 'Selecionar e Preencher Formulário'}
+                    </Button>
+                    {field.value && (
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <FileText className="h-3 w-3" />
+                        ID da resposta: {field.value}
+                      </p>
+                    )}
+                    <input type="hidden" {...field} />
+                  </div>
                 )}
               />
             </div>
@@ -679,13 +705,45 @@ export const TaskEditorFullscreen: React.FC = () => {
                       name="description"
                       control={control}
                       render={({ field }) => (
-                        <Textarea 
-                          {...field} 
+                        <Textarea
+                          {...field}
                           placeholder="Descreva os detalhes da tarefa"
                           rows={4}
                         />
                       )}
                     />
+                  </div>
+
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="weblink">Link Externo (opcional)</Label>
+                    <Controller
+                      name="weblink"
+                      control={control}
+                      render={({ field }) => (
+                        <div className="flex gap-2">
+                          <Input
+                            {...field}
+                            type="url"
+                            placeholder="https://exemplo.com/documento"
+                            className="flex-1"
+                          />
+                          {field.value && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              onClick={() => window.open(field.value, '_blank')}
+                              title="Abrir link em nova aba"
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                    />
+                    {form.formState.errors.weblink && (
+                      <p className="text-xs text-destructive">{form.formState.errors.weblink.message}</p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -1074,7 +1132,16 @@ export const TaskEditorFullscreen: React.FC = () => {
         }}
         onDocumentSelect={() => {}} // Required but not used in multiple mode
       />
+
+      {/* Modal for form selection and filling */}
+      <FormPickerModal
+        open={showFormPicker}
+        onOpenChange={setShowFormPicker}
+        onFormResponseSelected={(responseId, formTitle) => {
+          setValue('payload.form_response_id', responseId);
+          setSelectedFormResponseTitle(formTitle);
+        }}
+      />
     </FullscreenDialogContent>
   );
 };
-

@@ -2,6 +2,199 @@
 
 ## Histórico de Alterações
 
+### 2025-10-02
+
+#### Correção de Abas Duplicadas e Seletor de Contatos para Destinatários Externos
+- ✅ **Correção de Abas Duplicadas no FormConfigurationModal:**
+  - Removida duplicação visual de abas (Publicação, Destinatários, Configurações)
+  - Causa: ValidationPanel exibia grid de botões de navegação além das abas reais do componente Tabs
+  - Solução: Removidos botões de navegação do ValidationPanel (linhas 52-75), mantendo apenas progress bar e alertas
+  - Arquivo: `src/components/ValidationPanel.tsx`
+  - Data: 02/10/2025 23:00
+
+- ✅ **Migração SQL - Tabela form_external_contacts:**
+  - Criada tabela `form_external_contacts` para relacionamento entre formulários e contatos
+  - Campos: `form_id`, `contact_id`, `created_at`, `created_by`
+  - Constraint UNIQUE(form_id, contact_id) para evitar duplicatas
+  - Políticas RLS para criadores de formulários
+  - Índices para otimização de queries
+  - Arquivo: `supabase/migrations/20251002230000_add_form_external_contacts.sql`
+  - Data: 02/10/2025 23:05
+
+- ✅ **Novo Componente ContactsPickerModal:**
+  - Criado `src/components/ContactsPickerModal.tsx`
+  - Funcionalidades:
+    - Listagem de todos os contatos da base de Gestão de Contatos
+    - Busca por nome ou email
+    - Seleção múltipla com checkboxes
+    - Exibição de nome, email, cargo
+    - Warning visual para contatos sem email cadastrado
+    - Botão "Cadastrar Contato" que navega para tela de cadastro
+    - Preview de contatos selecionados com contador
+    - Integração com hooks `useContacts`
+  - Data: 02/10/2025 23:10
+
+- ✅ **Modo "Contacts" no ExternalRecipientsManager:**
+  - Adicionado suporte para prop `mode: 'manual' | 'contacts'`
+  - **Modo Manual** (original): Permite adicionar nome+email manualmente e importar CSV
+  - **Modo Contacts** (novo):
+    - Botão "Adicionar Usuários Externos" abre ContactsPickerModal
+    - Remove botões "Adicionar" e "Importar CSV"
+    - Exibe lista de contatos selecionados (readonly)
+    - Mostra email do contato ou warning "Sem email cadastrado"
+    - Props: `selectedContactIds`, `onContactsChange`
+  - Arquivo: `src/components/ExternalRecipientsManager.tsx`
+  - Data: 02/10/2025 23:15
+
+- ✅ **Integração no FormConfigurationModal:**
+  - Adicionado campo `external_contact_ids: string[]` ao estado config
+  - Quando status = `published_external`: ExternalRecipientsManager usa `mode="contacts"`
+  - Callback `onContactsChange` atualiza `config.external_contact_ids`
+  - Suporte em `buildConfigFromForm` para carregar contact_ids de formulários existentes
+  - Arquivo: `src/components/FormConfigurationModal.tsx` (linhas 54, 101, 562-573)
+  - Data: 02/10/2025 23:20
+
+- ✅ **Atualização de Validações:**
+  - Hook `useFormValidation` atualizado para considerar `external_contact_ids`
+  - Validação: Formulários externos devem ter `allows_anonymous_responses` OU `external_recipients` OU `external_contact_ids`
+  - Cálculo de progresso atualizado para incluir contact_ids
+  - Mensagem de erro atualizada: "Adicione usuários externos ou permita respostas anônimas"
+  - Arquivo: `src/hooks/useFormValidation.tsx` (linhas 67-80, 135, 155)
+  - Data: 02/10/2025 23:25
+
+- ✅ **Experiência do Usuário:**
+  - Fluxo intuitivo: Status "Publicado Externo" → Aba Destinatários → "Adicionar Usuários Externos" → Seleção de contatos
+  - Preview em tempo real de contatos selecionados
+  - Warnings visuais para contatos sem email
+  - Navegação facilitada para cadastro de novos contatos
+  - Compatibilidade mantida com sistema manual (formulários antigos)
+  - Data: 02/10/2025 23:30
+
+- ✅ **Integração Completa com Database - useForms Hook:**
+  - Adicionado campo `external_contact_ids?: string[]` à interface Form
+  - **fetchForms:** Carrega relacionamentos da tabela `form_external_contacts` e agrupa por form_id
+  - **createForm:** Insere relacionamentos em `form_external_contacts` após criar formulário
+  - **updateForm:** Delete-and-insert pattern para atualizar relacionamentos
+  - **deleteForm:** Cascading delete já tratado no banco (ON DELETE CASCADE)
+  - Tratamento de erros com warnings para operações de contatos
+  - Console logs detalhados para debugging
+  - Arquivo: `src/hooks/useForms.tsx` (linhas 38, 88-105, 170-190, 301-334)
+  - Data: 03/10/2025 00:45
+
+- ✅ **Correção do Layout do ContactsPickerModal - Botão Cancelar Sempre Visível:**
+  - **Problema:** DialogFooter com botões "Cancelar" e "Confirmar Seleção" estava sendo cortado quando havia muitos contatos
+  - **Causa:** DialogContent tinha `max-h-[80vh]` mas não controlava overflow; ScrollArea com altura fixa de 400px
+  - **Solução:** Implementado layout flexbox responsivo
+  - **Mudanças realizadas:**
+    - DialogContent: Adicionado `flex flex-col gap-4` para layout vertical controlado
+    - Altura máxima aumentada de `max-h-[80vh]` para `max-h-[85vh]` para melhor uso do espaço
+    - Search e badges: Adicionado `flex-shrink-0` para não comprimirem
+    - ScrollArea: Alterado de `h-[400px]` para `flex-1 min-h-0` (se expande/contrai conforme espaço disponível)
+    - Alert: Adicionado `flex-shrink-0` para manter tamanho consistente
+    - DialogFooter: Adicionado `flex-shrink-0` para **garantir visibilidade permanente**
+  - **Resultado:** Footer agora fica sempre fixo na parte inferior e visível, independente da quantidade de contatos
+  - Arquivo: `src/components/ContactsPickerModal.tsx` (linhas 79, 88, 102, 112, 195, 215)
+  - Data: 03/10/2025 00:50
+
+- ⚠️ **AÇÃO NECESSÁRIA - Migração SQL:**
+  - Executar migração manualmente no Supabase Dashboard:
+  ```sql
+  -- Copiar conteúdo de: supabase/migrations/20251002230000_add_form_external_contacts.sql
+  ```
+  - Ou via Supabase CLI quando houver sync das migrações
+
+#### Sistema de Múltiplas Moedas no Form Builder
+- ✅ **Suporte para Múltiplas Moedas:**
+  - Adicionado tipo `CurrencyType` com 4 moedas: BRL, USD, EUR, GBP
+  - Interface `CurrencyConfig` com configurações completas (símbolo, posição, separadores, bandeira, nome)
+  - Constante `CURRENCY_FORMATS` com formatações para cada moeda:
+    - 🇧🇷 Real Brasileiro (R$ 1.234,56)
+    - 🇺🇸 Dólar Americano ($ 1,234.56)
+    - 🇪🇺 Euro (€ 1.234,56)
+    - 🇬🇧 Libra Esterlina (£ 1,234.56)
+  - Arquivo: `src/types/formField.ts` (linhas 33-191)
+  - Data: 02/10/2025 22:35
+
+- ✅ **Formatação Dinâmica de Moedas:**
+  - Função `formatCurrency()` atualizada para usar configuração de moeda selecionada
+  - Função helper `getCurrencyFormatting()` para obter formatação por tipo de moeda
+  - Atualização de `getDefaultFormatting()` para aceitar parâmetro `currencyType`
+  - Separadores de milhares e decimais corretos para cada moeda
+  - Posicionamento automático do símbolo (antes/depois)
+  - Arquivo: `src/utils/fieldFormatting.ts` (linhas 6, 89-113, 326-354)
+  - Data: 02/10/2025 22:40
+
+- ✅ **Novo Componente CurrencySelector:**
+  - Criado `src/components/form-builder/CurrencySelector.tsx`
+  - Funcionalidades:
+    - Grid 2x2 com cards visuais para cada moeda
+    - Exibição de bandeira, nome e código da moeda
+    - Preview de formatação em tempo real
+    - Cores diferenciadas para cada moeda (verde, azul, roxo, âmbar)
+    - Highlight visual da moeda selecionada
+    - Preview com exemplo formatado (1.234,56 ou 1,234.56)
+  - Data: 02/10/2025 22:45
+
+- ✅ **Integração no ValidationPanel:**
+  - Seletor de moeda aparece automaticamente quando campo é do tipo `number` + subtipo `currency`
+  - Ao selecionar moeda, atualiza automaticamente `formatting.currencyType`
+  - Aplica todas as configurações de formatação (separadores, símbolos, etc.)
+  - Posicionado no topo da aba "Validação" para fácil acesso
+  - Arquivo: `src/components/form-builder/ValidationPanel.tsx` (linhas 13-15, 188-202)
+  - Data: 02/10/2025 22:50
+
+- ✅ **Experiência do Usuário:**
+  - Fluxo intuitivo: Usuário arrasta campo "Número" → Seleciona tipo "Moeda" → Escolhe a moeda desejada
+  - Preview visual em tempo real da formatação
+  - Suporte internacional completo
+  - Extensível para adicionar novas moedas facilmente
+  - Data: 02/10/2025 22:55
+
+#### Melhorias na Criação de Tarefas - Campo Weblink e Seletor de Formulários
+- ✅ **Campo Weblink Adicionado:**
+  - Criado campo `weblink` (TEXT, nullable) para todas as tarefas
+  - Migração SQL: `supabase/migrations/20251002200000_add_weblink_to_tasks.sql`
+  - Validação de URL implementada (aceita vazio ou URL válida)
+  - Botão "Abrir Link" ao lado do campo quando preenchido
+  - Arquivo: `src/pages/TaskEditorFullscreen.tsx` (linhas 711-741)
+  - Data: 01/10/2025 21:00
+
+- ✅ **Novo Componente FormPickerModal:**
+  - Criado `src/components/FormPickerModal.tsx`
+  - Funcionalidades:
+    - Listagem de formulários com status `task_usage`
+    - Busca e filtros por nome/descrição
+    - Exibição de badges (quantidade de respostas, campos obrigatórios)
+    - Botão "Preencher Novo" - abre formulário em nova aba
+    - Botão "Usar Última Resposta" - seleciona resposta já existente
+    - Atualização automática da lista de respostas
+  - Data: 01/10/2025 21:30
+
+- ✅ **Integração no Fluxo de Aprovação:**
+  - Quando `fixed_type = 'approval'` e `data_source = 'form'`:
+    - Campo "Formulário Preenchido" transformado em botão
+    - Botão abre FormPickerModal
+    - Após seleção, preenche automaticamente `form_response_id`
+    - Exibe título do formulário selecionado
+  - Arquivo: `src/pages/TaskEditorFullscreen.tsx` (linhas 479-509, 1130-1138)
+  - Data: 01/10/2025 22:00
+
+- ✅ **Melhorias de UX Implementadas:**
+  - Preview do link com botão de abertura
+  - Indicadores visuais (badges de status, contadores)
+  - Feedback com toasts informativos
+  - Validação de URL com mensagens de erro
+  - Responsividade mobile completa
+  - Data: 01/10/2025 22:30
+
+- ⚠️ **AÇÃO NECESSÁRIA - Migração SQL:**
+  - Executar migração manualmente no Supabase Dashboard:
+  ```sql
+  -- Copiar conteúdo de: supabase/migrations/20251002200000_add_weblink_to_tasks.sql
+  ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS weblink TEXT NULL;
+  ```
+  - Ou via Supabase CLI quando houver sync das migrações
+
 ### 2025-09-30
 
 #### Limpeza de Código

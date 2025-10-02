@@ -12,31 +12,6 @@ interface ValidationPanelProps {
 export const ValidationPanel = ({ validation, onNavigateToTab }: ValidationPanelProps) => {
   const { criticalErrors, warningErrors, completionPercentage, errorsByTab } = validation;
 
-  const getTabStatus = (tab: string) => {
-    const tabErrors = errorsByTab[tab] || [];
-    const hasCritical = tabErrors.some(e => e.severity === 'critical');
-    const hasWarning = tabErrors.some(e => e.severity === 'warning');
-    
-    if (hasCritical) return 'error';
-    if (hasWarning) return 'warning';
-    return 'success';
-  };
-
-  const getTabIcon = (status: string) => {
-    switch (status) {
-      case 'error': return <XCircle className="w-4 h-4 text-destructive" />;
-      case 'warning': return <AlertTriangle className="w-4 h-4 text-orange-500" />;
-      case 'success': return <CheckCircle className="w-4 h-4 text-green-500" />;
-      default: return null;
-    }
-  };
-
-  const tabs = [
-    { key: 'publication', label: 'Publicação' },
-    { key: 'recipients', label: 'Destinatários' },
-    { key: 'settings', label: 'Configurações' }
-  ];
-
   return (
     <div className="space-y-4">
       {/* Progress Bar */}
@@ -46,32 +21,6 @@ export const ValidationPanel = ({ validation, onNavigateToTab }: ValidationPanel
           <span className="text-sm text-muted-foreground">{completionPercentage}%</span>
         </div>
         <Progress value={completionPercentage} className="w-full" />
-      </div>
-
-      {/* Tab Status Overview */}
-      <div className="grid grid-cols-3 gap-2">
-        {tabs.map(tab => {
-          const status = getTabStatus(tab.key);
-          const tabErrors = errorsByTab[tab.key] || [];
-          
-          return (
-            <button
-              key={tab.key}
-              onClick={() => onNavigateToTab(tab.key)}
-              className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent transition-colors"
-            >
-              <div className="flex items-center gap-2">
-                {getTabIcon(status)}
-                <span className="text-sm font-medium">{tab.label}</span>
-              </div>
-              {tabErrors.length > 0 && (
-                <Badge variant={status === 'error' ? 'destructive' : 'secondary'} className="text-xs">
-                  {tabErrors.length}
-                </Badge>
-              )}
-            </button>
-          );
-        })}
       </div>
 
       {/* Critical Errors */}

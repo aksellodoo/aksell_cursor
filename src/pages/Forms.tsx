@@ -292,6 +292,8 @@ export const Forms = () => {
         return 'Rascunho';
       case 'archived':
         return 'Arquivado';
+      case 'task_usage':
+        return 'Uso em Tarefas';
       default:
         return status;
     }
@@ -301,8 +303,13 @@ export const Forms = () => {
     const status = form.publication_status || form.status;
     switch (status) {
       case 'published_internal':
+        return 'published_internal';
       case 'published_external':
+        return 'published_external';
       case 'published_mixed':
+        return 'published_mixed';
+      case 'task_usage':
+        return 'task_usage';
       case 'published':
         return 'default';
       case 'draft':
@@ -509,6 +516,7 @@ export const Forms = () => {
                     <SelectItem value="published_internal">Publicado - Interno</SelectItem>
                     <SelectItem value="published_external">Publicado - Externo</SelectItem>
                     <SelectItem value="published_mixed">Publicado - Misto</SelectItem>
+                    <SelectItem value="task_usage">Uso em Tarefas</SelectItem>
                     <SelectItem value="archived">Arquivado</SelectItem>
                   </SelectContent>
                 </Select>

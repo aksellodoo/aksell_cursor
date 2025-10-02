@@ -52,6 +52,10 @@ import { FormConfigurationModal } from './FormConfigurationModal';
 import { FormHeader } from './FormHeader';
 import { FileUpload } from '@/components/ui/file-upload';
 import { Sparkles } from 'lucide-react';
+import { NumberTypeSelector } from './form-builder/NumberTypeSelector';
+import { ValidationPanel } from './form-builder/ValidationPanel';
+import { getDefaultFormatting } from '@/utils/fieldFormatting';
+import type { FormFieldExtended, NumberSubtype } from '@/types/formField';
 
 const fieldTypes = [
   { type: 'text', label: 'Texto', icon: Type, description: 'Campo de texto simples', placeholder: 'Digite aqui...' },
@@ -74,6 +78,8 @@ const fieldTypes = [
   { type: 'section', label: 'Separador', icon: Layers, description: 'Separador visual entre seções' },
 ];
 
+type FormStatus = 'draft' | 'published_internal' | 'published_external' | 'published_mixed' | 'archived' | 'task_usage';
+
 interface Tab {
   id: string;
   title: string;
@@ -92,9 +98,10 @@ interface FormBuilderProps {
   onSave?: () => void;
   onCancel?: () => void;
   embedded?: boolean;
+  lockedStatus?: FormStatus;
 }
 
-export const FormBuilder = ({ form, onSave, onCancel, embedded = false }: FormBuilderProps = {}) => {
+export const FormBuilder = ({ form, onSave, onCancel, embedded = false, lockedStatus }: FormBuilderProps = {}) => {
   const [isHydrated, setIsHydrated] = useState(false);
   const [formData, setFormData] = useState({
     title: form?.title || 'Novo Formulário',
@@ -347,7 +354,7 @@ export const FormBuilder = ({ form, onSave, onCancel, embedded = false }: FormBu
 
   const addField = (type: string) => {
     const fieldType = fieldTypes.find(ft => ft.type === type);
-    const newField = {
+    const newField: FormFieldExtended = {
       id: `field-${Date.now()}`,
       type,
       label: type === 'section' ? 'Nova Seção' : `Novo Campo ${fieldType?.label || type}`,
@@ -356,10 +363,16 @@ export const FormBuilder = ({ form, onSave, onCancel, embedded = false }: FormBu
       width: 'full' as 'full' | 'half' | 'quarter',
       options: type === 'select' || type === 'radio' || type === 'checkbox' ? ['Opção 1'] : undefined,
       tabId: activeTabId,
-      // New field properties
+      // Field properties
       observacao: '',
       aiAssistEnabled: false,
       aiAssistPrompt: '',
+
+      // NEW: Validation and formatting properties
+      validation: {},
+      formatting: type === 'number' ? getDefaultFormatting('decimal') : {},
+      subtype: type === 'number' ? ('decimal' as NumberSubtype) : undefined,
+
       // AI field specific properties
       aiConfig: type === 'ai-suggest' ? {
         sourceFields: [],
@@ -596,6 +609,8 @@ export const FormBuilder = ({ form, onSave, onCancel, embedded = false }: FormBu
 
   const saveForm = async (configData: any) => {
     try {
+      console.log('FormBuilder.saveForm - Dados recebidos do modal:', configData);
+
       const formDataToSave = {
         title: formData.title,
         description: formData.description,
@@ -604,8 +619,21 @@ export const FormBuilder = ({ form, onSave, onCancel, embedded = false }: FormBu
           ...(form?.settings || {}),
           tabs: formData.tabs
         },
-        ...configData
+        // Garantir que os dados de configuração sejam preservados
+        status: configData.status || configData.publication_status || 'draft',
+        publication_status: configData.publication_status || configData.status || 'draft',
+        confidentiality_level: configData.confidentiality_level,
+        allows_anonymous_responses: configData.allows_anonymous_responses,
+        internal_recipients: configData.internal_recipients,
+        allowed_users: configData.allowed_users,
+        allowed_departments: configData.allowed_departments,
+        allowed_roles: configData.allowed_roles,
+        publication_settings: configData.publication_settings,
+        is_published: configData.is_published,
+        published_at: configData.published_at
       };
+
+      console.log('FormBuilder.saveForm - Dados preparados para salvar:', formDataToSave);
 
       if (currentFormId) {
         await updateForm(currentFormId, formDataToSave);
@@ -630,7 +658,7 @@ export const FormBuilder = ({ form, onSave, onCancel, embedded = false }: FormBu
       console.error('Error saving form:', error);
       toast({
         title: "Erro ao salvar",
-        description: "Ocorreu um erro ao salvar o formulário. Tente novamente.",
+        description: error instanceof Error ? error.message : "Ocorreu um erro ao salvar o formulário. Tente novamente.",
         variant: "destructive",
       });
     }
@@ -1479,10 +1507,21 @@ export const FormBuilder = ({ form, onSave, onCancel, embedded = false }: FormBu
                       </div>
                     )}
                   </div>
-                  
-                   <div className="space-y-4">
-                     <div>
-                       <Label className="text-sm font-semibold text-foreground">Ordem de Exibição</Label>
+
+                  {/* Tabs for Basic and Validation */}
+                  <Tabs defaultValue="basic" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2 mb-4">
+                      <TabsTrigger value="basic" className="text-xs">
+                        📝 Básico
+                      </TabsTrigger>
+                      <TabsTrigger value="validation" className="text-xs">
+                        ✅ Validação
+                      </TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="basic" className="space-y-4">
+                      <div>
+                        <Label className="text-sm font-semibold text-foreground">Ordem de Exibição</Label>
                        <Input
                          type="number"
                          min="1"
@@ -1603,6 +1642,19 @@ export const FormBuilder = ({ form, onSave, onCancel, embedded = false }: FormBu
                           />
                           <Label className="text-sm font-medium text-foreground">Campo obrigatório</Label>
                         </div>
+
+                        {/* Number Type Selector */}
+                        {selectedField.type === 'number' && (
+                          <NumberTypeSelector
+                            value={selectedField.subtype as NumberSubtype}
+                            onChange={(subtype) => {
+                              updateField(selectedField.id, {
+                                subtype,
+                                formatting: getDefaultFormatting(subtype),
+                              });
+                            }}
+                          />
+                        )}
 
                         {/* AI Assistance Configuration for Regular Fields */}
                         {selectedField.type !== 'ai-suggest' && selectedField.type !== 'download' && (
@@ -1912,7 +1964,16 @@ export const FormBuilder = ({ form, onSave, onCancel, embedded = false }: FormBu
                           )}
                         </div>
                       )}
-                    </div>
+                    </TabsContent>
+
+                    {/* Validation Tab */}
+                    <TabsContent value="validation" className="space-y-4">
+                      <ValidationPanel
+                        field={selectedField as FormFieldExtended}
+                        onUpdate={(updates) => updateField(selectedField.id, updates)}
+                      />
+                    </TabsContent>
+                  </Tabs>
                 </motion.div>
               ) : (
                 <motion.div 
@@ -2006,6 +2067,7 @@ export const FormBuilder = ({ form, onSave, onCancel, embedded = false }: FormBu
           onSave={saveForm}
           formId={currentFormId}
           form={form}
+          lockedStatus={lockedStatus}
         />
       </div>
     </TooltipProvider>

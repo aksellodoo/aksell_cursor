@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { X, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { FormBuilder } from '@/components/FormBuilder';
@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 
 const FormBuilderFullScreen: React.FC = () => {
   const { id } = useParams<{ id?: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { forms, loading } = useForms();
   const { toast } = useToast();
@@ -15,6 +16,7 @@ const FormBuilderFullScreen: React.FC = () => {
   const [isHydrated, setIsHydrated] = useState(false);
 
   const isEditing = Boolean(id);
+  const forceTaskUsageStatus = searchParams.get('taskUsage') === 'true';
 
   // Load form data for editing
   useEffect(() => {
@@ -100,6 +102,7 @@ const FormBuilderFullScreen: React.FC = () => {
             onSave={handleSave}
             onCancel={handleCancel}
             embedded={false}
+            lockedStatus={forceTaskUsageStatus ? 'task_usage' : undefined}
           />
         ) : (
           <div className="h-full flex items-center justify-center">

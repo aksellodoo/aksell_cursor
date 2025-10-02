@@ -15,15 +15,18 @@ import { ValidationIndicator } from './ValidationIndicator';
 import { useFormValidation } from '../hooks/useFormValidation';
 import { toast } from 'sonner';
 
+type FormStatus = 'draft' | 'published_internal' | 'published_external' | 'published_mixed' | 'archived' | 'task_usage';
+
 interface FormConfigurationModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (config: any) => void;
   formId?: string | null;
   form?: any;
+  lockedStatus?: FormStatus;
 }
 
-export const FormConfigurationModal = ({ isOpen, onClose, onSave, formId, form }: FormConfigurationModalProps) => {
+export const FormConfigurationModal = ({ isOpen, onClose, onSave, formId, form, lockedStatus }: FormConfigurationModalProps) => {
   const [currentTab, setCurrentTab] = useState('publication');
   
   const [config, setConfig] = useState({
@@ -33,7 +36,7 @@ export const FormConfigurationModal = ({ isOpen, onClose, onSave, formId, form }
     response_limit: null as number | null,
     deadline: null as string | null,
     estimated_fill_minutes: null as number | null,
-    status: 'draft' as 'draft' | 'published_internal' | 'published_external' | 'published_mixed' | 'archived' | 'task_usage',
+    status: (lockedStatus ?? 'draft') as FormStatus,
     access_selection: {
       specificUsers: [],
       roleSelections: [],
@@ -48,6 +51,7 @@ export const FormConfigurationModal = ({ isOpen, onClose, onSave, formId, form }
       roles: []
     },
     external_recipients: [] as Array<{ name: string; email: string }>,
+    external_contact_ids: [] as string[],
         publication_settings: {
           auto_notify: true,
           collect_metadata: true,
@@ -81,7 +85,7 @@ export const FormConfigurationModal = ({ isOpen, onClose, onSave, formId, form }
       response_limit: responseLimit,
       deadline: deadline,
       estimated_fill_minutes: estimatedFillMinutes,
-      status: form.publication_status || form.status || 'draft',
+      status: lockedStatus ?? (form.publication_status || form.status || 'draft'),
       access_selection: {
         specificUsers: form.allowed_users || [],
         roleSelections: form.allowed_roles || [],
@@ -94,6 +98,7 @@ export const FormConfigurationModal = ({ isOpen, onClose, onSave, formId, form }
         roles: []
       },
       external_recipients: form.external_recipients || [],
+      external_contact_ids: form.external_contact_ids || [],
       publication_settings: {
         auto_notify: form.publication_settings?.auto_notify ?? true,
         collect_metadata: form.publication_settings?.collect_metadata ?? true,
@@ -113,7 +118,15 @@ export const FormConfigurationModal = ({ isOpen, onClose, onSave, formId, form }
       console.log('FormConfigurationModal: Built config', newConfig);
       setConfig(newConfig);
     }
-  }, [form, isOpen]);
+  }, [form, isOpen, lockedStatus]);
+
+  useEffect(() => {
+    if (!lockedStatus) return;
+    setConfig(prev => ({
+      ...prev,
+      status: lockedStatus
+    }));
+  }, [lockedStatus, isOpen]);
 
   const isInternal = config.status === 'published_internal' || config.status === 'published_mixed';
   const isExternal = config.status === 'published_external' || config.status === 'published_mixed';
@@ -151,13 +164,25 @@ export const FormConfigurationModal = ({ isOpen, onClose, onSave, formId, form }
   };
 
   const handleSave = () => {
-    console.log('Saving configuration:', config);
+    console.log('=== FormConfigurationModal.handleSave INICIADO ===');
+    console.log('Config atual:', config);
     console.log('Validation result:', validation);
-    
+
     // Check for critical errors
     if (!validation.isValid) {
       toast.error('Corrija os erros antes de salvar a configuração');
       return;
+    }
+
+    // Verificar se é edição de formulário existente
+    if (formId && form) {
+      console.log('Editando formulário existente:', formId);
+      console.log('Formulário original:', form);
+
+      // Verificar se o status está sendo alterado
+      if (form.status !== config.status || form.publication_status !== config.status) {
+        console.log('Status sendo alterado de', form.status, 'para', config.status);
+      }
     }
 
     // Preparar dados no formato correto para a tabela forms
@@ -168,15 +193,15 @@ export const FormConfigurationModal = ({ isOpen, onClose, onSave, formId, form }
       status: config.status,
       confidentiality_level: config.confidentiality_level,
       allows_anonymous_responses: config.allows_anonymous_responses,
-      
+
       // internal_recipients como jsonb no formato correto
       internal_recipients: config.internal_recipients,
-      
+
       // Campos opcionais
       allowed_users: config.confidentiality_level === 'private' ? config.access_selection?.specificUsers || [] : null,
       allowed_departments: config.confidentiality_level === 'private' ? config.access_selection?.departmentSelections || [] : null,
       allowed_roles: config.confidentiality_level === 'private' ? config.access_selection?.roleSelections || [] : null,
-      
+
       // Configurações como jsonb
       publication_settings: {
         ...config.publication_settings,
@@ -184,15 +209,19 @@ export const FormConfigurationModal = ({ isOpen, onClose, onSave, formId, form }
         deadline: config.deadline,
         estimated_fill_minutes: config.estimated_fill_minutes
       },
-      
+
       // Definir is_published baseado no status
       is_published: ['published_internal', 'published_external', 'published_mixed', 'task_usage'].includes(config.status),
-      published_at: ['published_internal', 'published_external', 'published_mixed', 'task_usage'].includes(config.status) ? new Date().toISOString() : null
+      published_at: ['published_internal', 'published_external', 'published_mixed', 'task_usage'].includes(config.status)
+        ? (form?.published_at || new Date().toISOString())
+        : null
     };
 
     console.log('=== DADOS PREPARADOS PARA SALVAMENTO ===');
-    console.log('FormData:', formData);
-    
+    console.log('FormData que será enviado:', formData);
+    console.log('Status final:', formData.status);
+    console.log('Publication status final:', formData.publication_status);
+
     // NOTA: external_recipients será tratado separadamente na tabela form_external_recipients
     onSave(formData);
   };
@@ -296,16 +325,19 @@ export const FormConfigurationModal = ({ isOpen, onClose, onSave, formId, form }
                       <Select 
                         value={config.status} 
                         onValueChange={(value: any) => {
-                        console.log('Status changed to:', value);
-                        setConfig(prev => ({ 
-                          ...prev, 
-                          status: value,
-                          // Reset related fields when changing status
-                          allows_anonymous_responses: false,
-                          internal_recipients: { users: [], departments: [], roles: [] },
-                          external_recipients: []
-                        }));
-                      }}>
+                          if (lockedStatus) return;
+                          console.log('Status changed to:', value);
+                          setConfig(prev => ({ 
+                            ...prev, 
+                            status: value,
+                            // Reset related fields when changing status
+                            allows_anonymous_responses: false,
+                            internal_recipients: { users: [], departments: [], roles: [] },
+                            external_recipients: []
+                          }));
+                      }}
+                        disabled={!!lockedStatus}
+                      >
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Selecione o status" />
                         </SelectTrigger>
@@ -351,6 +383,11 @@ export const FormConfigurationModal = ({ isOpen, onClose, onSave, formId, form }
                            </SelectItem>
                          </SelectContent>
                       </Select>
+                      {lockedStatus === 'task_usage' && (
+                        <p className="mt-2 text-sm text-purple-700">
+                          Este formulário ficará disponível apenas para tarefas. O status está travado em "Uso em Tarefas".
+                        </p>
+                      )}
                     </div>
 
                     <div>
@@ -523,8 +560,15 @@ export const FormConfigurationModal = ({ isOpen, onClose, onSave, formId, form }
 
                       {!config.allows_anonymous_responses && (
                         <ExternalRecipientsManager
-                          recipients={config.external_recipients}
-                          onChange={handleExternalRecipientsChange}
+                          mode="contacts"
+                          selectedContactIds={config.external_contact_ids}
+                          onContactsChange={(contactIds) => {
+                            console.log('External contact IDs changed:', contactIds);
+                            setConfig(prev => ({
+                              ...prev,
+                              external_contact_ids: contactIds
+                            }));
+                          }}
                         />
                       )}
                     </CardContent>

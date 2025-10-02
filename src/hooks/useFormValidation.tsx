@@ -64,14 +64,15 @@ export const useFormValidation = (config: any) => {
     }
 
     if (isExternal && !isTaskUsage) {
-      const hasExternalAccess = 
-        config.allows_anonymous_responses || 
-        (config.external_recipients?.length > 0);
+      const hasExternalAccess =
+        config.allows_anonymous_responses ||
+        (config.external_recipients?.length > 0) ||
+        (config.external_contact_ids?.length > 0);
 
       if (!hasExternalAccess) {
         errors.push({
           field: 'external_recipients',
-          message: 'Adicione destinatários externos ou permita respostas anônimas',
+          message: 'Adicione usuários externos ou permita respostas anônimas',
           severity: 'critical',
           tab: 'recipients'
         });
@@ -131,7 +132,7 @@ export const useFormValidation = (config: any) => {
       if ((config.internal_recipients?.users?.length > 0) || 
           (config.internal_recipients?.departments?.length > 0) || 
           (config.internal_recipients?.roles?.length > 0)) completedFields++;
-      if (config.allows_anonymous_responses || config.external_recipients?.length > 0) completedFields++;
+      if (config.allows_anonymous_responses || config.external_recipients?.length > 0 || config.external_contact_ids?.length > 0) completedFields++;
       if (config.response_limit && config.response_limit >= 1) completedFields++;
       if (config.deadline && new Date(config.deadline) > new Date()) completedFields++;
       if (config.estimated_fill_minutes) completedFields++;
@@ -151,7 +152,7 @@ export const useFormValidation = (config: any) => {
         if (isInternal && ((config.internal_recipients?.users?.length > 0) || 
                            (config.internal_recipients?.departments?.length > 0) || 
                            (config.internal_recipients?.roles?.length > 0))) completedFields++;
-        if (isExternal && (config.allows_anonymous_responses || config.external_recipients?.length > 0)) completedFields++;
+        if (isExternal && (config.allows_anonymous_responses || config.external_recipients?.length > 0 || config.external_contact_ids?.length > 0)) completedFields++;
       }
     }
 
