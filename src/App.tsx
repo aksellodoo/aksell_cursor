@@ -30,6 +30,7 @@ import { TaskEditorFullscreen } from "./pages/TaskEditorFullscreen";
 import { Forms } from "./pages/Forms";
 import { Automacoes } from "./pages/Automacoes";
 import FormBuilderFullScreen from "./components/FormBuilderFullScreen";
+import FormPublicFill from "./pages/FormPublicFill";
 import DocumentManagement from "./pages/DocumentManagement";
 import DocumentImport from "./pages/DocumentImport";
 
@@ -94,6 +95,7 @@ const App = () => (
                 <Route path="/formularios" element={<AppLayout><Forms /></AppLayout>} />
                 <Route path="/formularios/builder" element={<AppLayout><FormBuilderFullScreen /></AppLayout>} />
                 <Route path="/formularios/:id/editar" element={<AppLayout><FormBuilderFullScreen /></AppLayout>} />
+                <Route path="/formulario/publico/:token" element={<FormPublicFill />} />
                 <Route path="/automacoes" element={<AppLayout><Automacoes /></AppLayout>} />
                 
                 {/* Gestão */}

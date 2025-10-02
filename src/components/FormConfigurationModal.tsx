@@ -10,9 +10,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { X, Save, Users, Shield, Calendar, Hash, Globe, Mail, Settings, Briefcase } from 'lucide-react';
 import { AdvancedApproverSelector } from './AdvancedApproverSelector';
 import { ExternalRecipientsManager } from './ExternalRecipientsManager';
+import { DeliveryChannelSelector } from './DeliveryChannelSelector';
 import { ValidationPanel } from './ValidationPanel';
 import { ValidationIndicator } from './ValidationIndicator';
 import { useFormValidation } from '../hooks/useFormValidation';
+import { useContacts } from '../hooks/useContacts';
+import { useAuth } from '../hooks/useAuth';
 import { toast } from 'sonner';
 
 type FormStatus = 'draft' | 'published_internal' | 'published_external' | 'published_mixed' | 'archived' | 'task_usage';
@@ -28,6 +31,11 @@ interface FormConfigurationModalProps {
 
 export const FormConfigurationModal = ({ isOpen, onClose, onSave, formId, form, lockedStatus }: FormConfigurationModalProps) => {
   const [currentTab, setCurrentTab] = useState('publication');
+  const [showDeliverySelector, setShowDeliverySelector] = useState(false);
+  const [savedFormId, setSavedFormId] = useState<string | null>(null);
+
+  const { contacts } = useContacts();
+  const { user } = useAuth();
   
   const [config, setConfig] = useState({
     title: form?.title || '',
@@ -224,6 +232,15 @@ export const FormConfigurationModal = ({ isOpen, onClose, onSave, formId, form, 
 
     // NOTA: external_recipients será tratado separadamente na tabela form_external_recipients
     onSave(formData);
+
+    // Se há contatos externos selecionados e o status permite envio externo, mostrar seletor de canais
+    const hasExternalContacts = config.external_contact_ids && config.external_contact_ids.length > 0;
+    const allowsExternalDelivery = config.status === 'published_external' || config.status === 'published_mixed';
+
+    if (hasExternalContacts && allowsExternalDelivery) {
+      setSavedFormId(formId || null);
+      setShowDeliverySelector(true);
+    }
   };
 
   if (!isOpen) return null;
@@ -899,6 +916,28 @@ export const FormConfigurationModal = ({ isOpen, onClose, onSave, formId, form, 
           </div>
         </div>
       </div>
+
+      {/* Delivery Channel Selector Modal */}
+      {showDeliverySelector && savedFormId && config.external_contact_ids && (
+        <DeliveryChannelSelector
+          isOpen={showDeliverySelector}
+          onClose={() => setShowDeliverySelector(false)}
+          contacts={contacts.filter(c => config.external_contact_ids?.includes(c.id))}
+          formId={savedFormId}
+          formTitle={config.title}
+          formDescription={form?.description}
+          estimatedMinutes={config.estimated_fill_minutes || undefined}
+          deadline={config.publication_settings?.response_deadline || config.deadline || undefined}
+          creatorName={user?.email?.split('@')[0] || 'Sistema'}
+          onSendComplete={(success) => {
+            setShowDeliverySelector(false);
+            if (success) {
+              toast.success('Convites enviados com sucesso!');
+              onClose();
+            }
+          }}
+        />
+      )}
     </div>
   );
 };

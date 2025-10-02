@@ -173,19 +173,36 @@
   - Arquivo: `supabase/functions/send-form-invitation/index.ts`
   - Data: 03/10/2025 03:15
 
-- ⏳ **PENDENTE - Integração no FormConfigurationModal:**
-  - Adicionar botão "Publicar e Enviar Convites"
-  - Abrir DeliveryChannelSelector após salvar formulário
-  - Passar informações do formulário e contatos selecionados
-  - Implementar callback de conclusão
+- ✅ **Integração no FormConfigurationModal:**
+  - Adicionados imports: DeliveryChannelSelector, useContacts, useAuth
+  - Estado: `showDeliverySelector`, `savedFormId`
+  - Lógica em `handleSave`: Detecta formulários com status externo/misto + contatos selecionados
+  - Abre DeliveryChannelSelector automaticamente após salvar
+  - Passa dados: formId, título, descrição, tempo estimado, prazo, nome do criador
+  - Callback `onSendComplete`: Fecha modal e exibe toast de sucesso
+  - Arquivo: `src/components/FormConfigurationModal.tsx` (linhas 13, 17-18, 34-38, 236-243, 920-940)
+  - Data: 03/10/2025 04:10
 
-- ⏳ **PENDENTE - Página FormPublicFill:**
-  - Rota: `/formulario/publico/:token`
-  - Validar token único
-  - Carregar formulário associado
-  - Permitir preenchimento sem login
-  - Salvar resposta vinculada ao contato
-  - Marcar convite como respondido
+- ✅ **Página FormPublicFill:**
+  - Rota pública: `/formulario/publico/:token`
+  - Validação de token via `useFormInvitations.validateToken()`
+  - Verificação de expiração (deadline)
+  - Verificação se já foi respondido
+  - Renderização dinâmica de campos (text, email, number, textarea, select)
+  - Submit com validação de campos obrigatórios
+  - Salvamento em `form_responses` com metadata
+  - Marca convite como respondido após submit
+  - Estados: loading, error, submitted
+  - UI responsiva com Cards e formatação profissional
+  - Arquivo: `src/pages/FormPublicFill.tsx`
+  - Data: 03/10/2025 04:15
+
+- ✅ **Rota no React Router:**
+  - Adicionado import de `FormPublicFill`
+  - Rota pública (sem AppLayout): `<Route path="/formulario/publico/:token" element={<FormPublicFill />} />`
+  - Posicionada após rotas de formulários autenticadas
+  - Arquivo: `src/App.tsx` (linhas 33, 98)
+  - Data: 03/10/2025 04:16
 
 - ⏳ **PENDENTE - Testes e Deploy:**
   - Executar migração SQL no Supabase
@@ -194,12 +211,12 @@
   - Documentação de uso
 
 - 📋 **Próximos Passos:**
-  1. Integrar DeliveryChannelSelector no FormConfigurationModal
-  2. Criar página de preenchimento público (FormPublicFill.tsx)
-  3. Adicionar rota no React Router
-  4. Executar migração SQL
-  5. Deploy da edge function
-  6. Testes completos do fluxo
+  1. ✅ ~~Integrar DeliveryChannelSelector no FormConfigurationModal~~ **CONCLUÍDO**
+  2. ✅ ~~Criar página de preenchimento público (FormPublicFill.tsx)~~ **CONCLUÍDO**
+  3. ✅ ~~Adicionar rota no React Router~~ **CONCLUÍDO**
+  4. ⏳ Executar migração SQL no Supabase
+  5. ⏳ Deploy da edge function: `supabase functions deploy send-form-invitation`
+  6. ⏳ Testes completos do fluxo end-to-end
 
 - 🎯 **Funcionalidades Futuras (Fase 2+):**
   - Integração WhatsApp Business API
