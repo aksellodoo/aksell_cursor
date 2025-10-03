@@ -82,7 +82,7 @@ export interface FormResponseData {
 export interface TaskComment {
   id: string;
   task_id: string;
-  content: string;
+  comment: string;
   created_at: string;
   author_id: string;
   author: {
@@ -170,7 +170,39 @@ export const useTaskApproval = (taskId: string) => {
         .order('uploaded_at', { ascending: false});
 
       if (!attachmentsError) {
-        setAttachments(attachmentsData as any || []);
+        let finalAttachments = attachmentsData as any || [];
+
+        // FALLBACK: Se não houver anexos em task_attachments mas houver file_id no payload,
+        // buscar o arquivo em documents (Gestão de Documentos)
+        if (finalAttachments.length === 0 && payload?.data_source === 'file' && payload?.file_id) {
+          console.log('📎 No attachments found, trying fallback from payload.file_id:', payload.file_id);
+
+          const { data: fileData, error: fileError } = await supabase
+            .from('documents')
+            .select('id, name, file_url, storage_key, file_size, mime_type, created_by')
+            .eq('id', payload.file_id)
+            .single();
+
+          if (!fileError && fileData) {
+            console.log('✅ Found file in documents:', fileData);
+            // Converter formato de documents para task_attachments
+            finalAttachments = [{
+              id: fileData.id,
+              task_id: taskId,
+              file_name: fileData.name,
+              file_path: fileData.storage_key || fileData.file_url, // usar storage_key se disponível
+              file_size: fileData.file_size,
+              file_type: fileData.mime_type,
+              uploaded_by: fileData.created_by,
+              uploaded_at: new Date().toISOString(),
+              uploader: null, // Não temos dados do uploader no fallback
+            }];
+          } else {
+            console.warn('⚠️ File not found in documents:', payload.file_id);
+          }
+        }
+
+        setAttachments(finalAttachments);
       }
 
       // Buscar formulário e resposta se data_source for "form"
@@ -182,7 +214,6 @@ export const useTaskApproval = (taskId: string) => {
             response_data,
             submitted_at,
             submitted_by,
-            submitter:submitted_by(id, name, email, department),
             form:form_id(
               id,
               title,
@@ -194,7 +225,33 @@ export const useTaskApproval = (taskId: string) => {
           .single();
 
         if (responseError) throw responseError;
-        setFormResponseData(responseData as any);
+
+        // Buscar dados do submitter via public.profiles
+        let submitterData = null;
+        if (responseData?.submitted_by) {
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('id, name, email, department')
+            .eq('id', responseData.submitted_by)
+            .single();
+
+          if (!profileError && profileData) {
+            submitterData = profileData;
+          }
+        }
+
+        // Combinar dados
+        setFormResponseData({
+          ...responseData,
+          response: {
+            id: responseData.id,
+            response_data: responseData.response_data,
+            submitted_at: responseData.submitted_at,
+            submitted_by: responseData.submitted_by,
+            submitter: submitterData
+          },
+          form: responseData.form
+        } as any);
       }
 
       // Buscar comentários
@@ -203,7 +260,7 @@ export const useTaskApproval = (taskId: string) => {
         .select(`
           id,
           task_id,
-          content,
+          comment,
           created_at,
           author_id,
           author:author_id(name, email)
@@ -284,7 +341,7 @@ export const useTaskApproval = (taskId: string) => {
         .from('task_comments')
         .insert({
           task_id: task.id,
-          content: content.trim(),
+          comment: content.trim(),
           author_id: user?.id
         });
 

@@ -238,7 +238,7 @@ export const TaskApprovalProcessor = () => {
         </Card>
 
         {/* Seção 2: Critérios e Requisitos de Aprovação */}
-        {(task.payload.approval_criteria?.length ||
+        {((Array.isArray(task.payload.approval_criteria) && task.payload.approval_criteria.length > 0) ||
           task.payload.require_justification ||
           task.payload.expires_at) && (
           <Card className="border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20">
@@ -250,7 +250,7 @@ export const TaskApprovalProcessor = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Critérios de Aprovação */}
-              {task.payload.approval_criteria && task.payload.approval_criteria.length > 0 && (
+              {Array.isArray(task.payload.approval_criteria) && task.payload.approval_criteria.length > 0 && (
                 <div className="space-y-2">
                   <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
                     Critérios a serem verificados:
@@ -284,6 +284,25 @@ export const TaskApprovalProcessor = () => {
           </Card>
         )}
 
+        {/* Critérios de Aprovação (se existir) */}
+        {task.payload.approval_criteria && task.payload.approval_criteria.trim() !== '' && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="w-5 h-5" />
+                Critérios de Aprovação
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="prose prose-sm max-w-none">
+                <p className="whitespace-pre-wrap text-sm leading-relaxed">
+                  {task.payload.approval_criteria}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Seção 3: Conteúdo para Aprovação */}
         <Card>
           <CardHeader>
@@ -304,17 +323,17 @@ export const TaskApprovalProcessor = () => {
                   <div className="flex items-start gap-3">
                     <FileText className="w-8 h-8 text-primary flex-shrink-0" />
                     <div>
-                      <p className="font-semibold text-lg">{formResponseData.form.title}</p>
+                      <p className="font-semibold text-lg">{formResponseData.form?.title || 'Formulário'}</p>
                       <p className="text-sm text-muted-foreground">
-                        Preenchido por {formResponseData.response.submitter?.name || 'Usuário desconhecido'}
+                        Preenchido por {formResponseData.response?.submitter?.name || 'Usuário desconhecido'}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {format(new Date(formResponseData.response.submitted_at), 'dd/MM/yyyy HH:mm', {
+                        {formResponseData.response?.submitted_at && format(new Date(formResponseData.response.submitted_at), 'dd/MM/yyyy HH:mm', {
                           locale: ptBR
                         })}
                       </p>
                       <Badge variant="secondary" className="mt-2">
-                        {formResponseData.form.fields_definition?.length || 0} campos
+                        {formResponseData.form?.fields_definition?.length || 0} campos
                       </Badge>
                     </div>
                   </div>
@@ -456,7 +475,7 @@ export const TaskApprovalProcessor = () => {
                         </span>
                       </div>
                       <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                        {comment.content}
+                        {comment.comment}
                       </p>
                     </div>
                   </div>

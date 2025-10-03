@@ -17,6 +17,79 @@ export const TaskAttachmentViewer = ({ attachments }: TaskAttachmentViewerProps)
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewType, setPreviewType] = useState<'image' | 'pdf' | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  const KNOWN_BUCKETS = ['docs-prod', 'task-attachments'] as const;
+
+  const splitBucketFromPath = (
+    rawPath: string
+  ): { bucket: string | null; path: string } => {
+    if (!rawPath) return { bucket: null, path: '' };
+
+    // Normalizar separadores e remover espaços
+    let inputPath = String(rawPath).trim().replace(/^\/+/, '');
+
+    // Remover prefixos do endpoint do Supabase Storage, caso presentes
+    // Exemplos aceitos:
+    // storage/v1/object/public/<bucket>/<path>
+    // public/<bucket>/<path>
+    // sign/<bucket>/<path>
+    // raw/<bucket>/<path>
+    const storagePrefixes = [
+      'storage/v1/object/',
+      'public/',
+      'sign/',
+      'raw/'
+    ];
+    for (const p of storagePrefixes) {
+      if (inputPath.startsWith(p)) {
+        inputPath = inputPath.slice(p.length);
+        break;
+      }
+    }
+
+    // Se após remover prefixo ainda começar com escopo (public|sign|raw)
+    const scopeMatch = inputPath.match(/^(public|sign|raw)\/(.+)$/);
+    if (scopeMatch) {
+      inputPath = scopeMatch[2];
+    }
+
+    // Se vier com bucket explícito no início
+    for (const b of KNOWN_BUCKETS) {
+      if (inputPath.startsWith(`${b}/`)) {
+        return { bucket: b, path: inputPath.slice(b.length + 1) };
+      }
+    }
+
+    // Caso contrário, nenhum bucket explícito; retornar caminho como está
+    return { bucket: null, path: inputPath };
+  };
+
+  const createSignedUrlWithFallback = async (inputPath: string): Promise<string> => {
+    const { bucket, path } = splitBucketFromPath(inputPath);
+    const bucketsToTry = bucket ? [bucket] : [...KNOWN_BUCKETS];
+    let lastErr: any = null;
+    for (const b of bucketsToTry) {
+      const { data, error } = await supabase.storage
+        .from(b)
+        .createSignedUrl(path, 3600);
+      if (!error && data?.signedUrl) return data.signedUrl;
+      lastErr = error;
+    }
+    throw lastErr || new Error('Falha ao gerar URL do arquivo');
+  };
+
+  const downloadWithFallback = async (inputPath: string): Promise<Blob> => {
+    const { bucket, path } = splitBucketFromPath(inputPath);
+    const bucketsToTry = bucket ? [bucket] : [...KNOWN_BUCKETS];
+    let lastErr: any = null;
+    for (const b of bucketsToTry) {
+      const { data, error } = await supabase.storage.from(b).download(path);
+      if (!error && data) return data;
+      lastErr = error;
+    }
+    throw lastErr || new Error('Arquivo não encontrado em buckets conhecidos');
+  };
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
@@ -43,15 +116,25 @@ export const TaskAttachmentViewer = ({ attachments }: TaskAttachmentViewerProps)
   const handleDownload = async (attachment: TaskAttachment) => {
     try {
       setDownloadingId(attachment.id);
+      // Se o caminho já é uma URL completa (legado), baixar diretamente
+      if (/^https?:\/\//i.test(attachment.file_path)) {
+        const link = document.createElement('a');
+        link.href = attachment.file_path;
+        link.download = attachment.file_name;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success('Download iniciado');
+        return;
+      }
 
-      const { data, error } = await supabase.storage
-        .from('task-attachments')
-        .download(attachment.file_path);
+      // Detectar bucket correto: se file_path contém "/" é storage_key de docs-prod
+      const bucket = attachment.file_path.includes('/') ? 'docs-prod' : 'task-attachments';
 
-      if (error) throw error;
+      const blob = await downloadWithFallback(attachment.file_path);
 
       // Criar URL para download
-      const url = URL.createObjectURL(data);
+      const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       link.download = attachment.file_name;
@@ -68,31 +151,95 @@ export const TaskAttachmentViewer = ({ attachments }: TaskAttachmentViewerProps)
       setDownloadingId(null);
     }
   };
-
   const handlePreview = async (attachment: TaskAttachment) => {
+    setPreviewLoading(true);
     try {
-      // Verificar se é imagem ou PDF
+      console.log('🔍 Preview - Starting preview for:', attachment.file_name);
+      console.log('🔍 Preview - File path:', attachment.file_path);
+      console.log('🔍 Preview - File type:', attachment.file_type);
+
+      // Se já é URL completa (legado), usar diretamente
+      if (/^https?:\/\//i.test(attachment.file_path)) {
+        console.log('✅ Preview - Using legacy URL directly');
+        const isImageUrl = attachment.file_type.startsWith('image/');
+        setPreviewUrl(attachment.file_path);
+        setPreviewType(isImageUrl ? 'image' : 'pdf');
+        return;
+      }
+
+      // Verificar tipo suportado
       const isImage = attachment.file_type.startsWith('image/');
       const isPdf = attachment.file_type === 'application/pdf';
-
       if (!isImage && !isPdf) {
+        console.warn('⚠️ Preview - Unsupported file type:', attachment.file_type);
         toast.info('Preview disponível apenas para imagens e PDFs');
         return;
       }
 
-      const { data, error } = await supabase.storage
-        .from('task-attachments')
-        .createSignedUrl(attachment.file_path, 3600); // 1 hora
+      // Detectar bucket correto
+      // IMPORTANTE: Arquivos estão sempre em docs-prod (Gestão de Documentos)
+      const { bucket, path } = splitBucketFromPath(attachment.file_path);
+      const detectedBucket = bucket || 'docs-prod';
 
-      if (error) throw error;
+      // Se splitBucketFromPath retornou bucket null mas detectamos um, precisamos remover o prefixo do path
+      let finalPath = path;
+      if (!bucket && detectedBucket) {
+        // Remover o bucket do início do path se estiver presente
+        if (finalPath.startsWith(`${detectedBucket}/`)) {
+          finalPath = finalPath.slice(detectedBucket.length + 1);
+        }
+      }
 
-      setPreviewUrl(data.signedUrl);
+      console.log('🔍 Preview - Detected bucket:', detectedBucket);
+      console.log('🔍 Preview - Extracted path:', finalPath);
+
+      // 1) Tentar URL assinada
+      try {
+        console.log('🔄 Preview - Attempting signed URL...');
+        const { data, error } = await supabase.storage
+          .from(detectedBucket)
+          .createSignedUrl(finalPath, 3600);
+
+        if (!error && data?.signedUrl) {
+          console.log('✅ Preview - Signed URL created successfully');
+          setPreviewUrl(data.signedUrl);
+          setPreviewType(isImage ? 'image' : 'pdf');
+          return;
+        }
+
+        console.warn('⚠️ Preview - Signed URL failed:', error?.message);
+      } catch (err) {
+        console.warn('⚠️ Preview - Signed URL error:', err);
+      }
+
+      // 2) Fallback: baixar blob e criar ObjectURL com tipo MIME correto
+      console.log('🔄 Preview - Trying blob download fallback...');
+      const { data: blob, error: downloadError } = await supabase.storage
+        .from(detectedBucket)
+        .download(finalPath);
+
+      if (downloadError || !blob) {
+        throw new Error(`Falha ao baixar arquivo: ${downloadError?.message || 'Blob vazio'}`);
+      }
+
+      console.log('✅ Preview - Blob downloaded successfully, size:', blob.size);
+
+      // Criar blob com tipo MIME correto (importante para PDFs)
+      const typedBlob = new Blob([blob], { type: attachment.file_type });
+      const objectUrl = URL.createObjectURL(typedBlob);
+
+      console.log('✅ Preview - ObjectURL created:', objectUrl);
+      setPreviewUrl(objectUrl);
       setPreviewType(isImage ? 'image' : 'pdf');
     } catch (error: any) {
-      console.error('Error creating preview:', error);
-      toast.error('Erro ao gerar preview');
+      console.error('❌ Preview - Error:', error);
+      toast.error('Erro ao gerar preview: ' + (error?.message || 'Erro desconhecido'));
+    } finally {
+      setPreviewLoading(false);
     }
   };
+
+  
 
   if (attachments.length === 0) {
     return (
@@ -166,15 +313,21 @@ export const TaskAttachmentViewer = ({ attachments }: TaskAttachmentViewerProps)
       })}
 
       {/* Preview Modal */}
-      {previewUrl && (
+      {(previewUrl || previewLoading) && (
         <div
           className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4"
           onClick={() => {
-            setPreviewUrl(null);
-            setPreviewType(null);
+            if (!previewLoading) {
+              // Limpar ObjectURL para evitar memory leak
+              if (previewUrl && previewUrl.startsWith('blob:')) {
+                URL.revokeObjectURL(previewUrl);
+              }
+              setPreviewUrl(null);
+              setPreviewType(null);
+            }
           }}
         >
-          <Card className="max-w-5xl max-h-[90vh] w-full overflow-auto">
+          <Card className="max-w-5xl max-h-[90vh] w-full overflow-auto" onClick={(e) => e.stopPropagation()}>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Preview do Anexo</CardTitle>
@@ -182,25 +335,38 @@ export const TaskAttachmentViewer = ({ attachments }: TaskAttachmentViewerProps)
                   variant="ghost"
                   size="sm"
                   onClick={() => {
+                    // Limpar ObjectURL para evitar memory leak
+                    if (previewUrl && previewUrl.startsWith('blob:')) {
+                      URL.revokeObjectURL(previewUrl);
+                    }
                     setPreviewUrl(null);
                     setPreviewType(null);
                   }}
+                  disabled={previewLoading}
                 >
                   Fechar
                 </Button>
               </div>
             </CardHeader>
             <CardContent>
-              {previewType === 'image' && (
+              {previewLoading && (
+                <div className="flex items-center justify-center h-[70vh]">
+                  <div className="text-center space-y-4">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+                    <p className="text-sm text-muted-foreground">Carregando preview...</p>
+                  </div>
+                </div>
+              )}
+              {!previewLoading && previewType === 'image' && (
                 <img
-                  src={previewUrl}
+                  src={previewUrl!}
                   alt="Preview"
                   className="w-full h-auto max-h-[70vh] object-contain"
                 />
               )}
-              {previewType === 'pdf' && (
+              {!previewLoading && previewType === 'pdf' && (
                 <iframe
-                  src={previewUrl}
+                  src={previewUrl!}
                   className="w-full h-[70vh] border-0"
                   title="PDF Preview"
                 />
@@ -212,3 +378,5 @@ export const TaskAttachmentViewer = ({ attachments }: TaskAttachmentViewerProps)
     </div>
   );
 };
+
+

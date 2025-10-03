@@ -2,6 +2,178 @@
 
 ## Histórico de Alterações
 
+### 2025-10-03
+
+#### Correção: Preview de PDF e Imagens em Anexos de Tarefas ✅
+- ✅ **Problema Identificado:**
+  - Ao clicar em "Visualizar" em anexos PDF ou imagem na tela de processamento de aprovação, o preview falhava com erro "Object not found"
+  - **Causa raiz principal:** Arquivos sempre vão para bucket `docs-prod` (Gestão de Documentos), mas código tentava buscar em `task-attachments`
+  - **Causa raiz secundária:** Função `handlePreview` não detectava corretamente o bucket e não removia prefixos do path
+
+- ✅ **Solução Implementada:**
+  1. **Correção da detecção de bucket (CRÍTICO):**
+     - **Alterado `KNOWN_BUCKETS`** para priorizar `docs-prod` como primeiro bucket a testar
+     - **Default forçado para `docs-prod`** quando bucket não é detectado automaticamente
+     - Adicionada lógica para remover prefixo do bucket do path antes de acessar storage
+     - Linhas modificadas: 22, 179-193 em [TaskAttachmentViewer.tsx](src/components/TaskAttachmentViewer.tsx)
+
+  2. **Melhorias no preview:**
+     - Adicionado estado `previewLoading` para indicar carregamento
+     - Implementado spinner de loading enquanto carrega preview
+     - Criação de blob tipado com MIME type correto para PDFs (`new Blob([blob], { type: 'application/pdf' })`)
+     - Limpeza automática de ObjectURLs para prevenir memory leaks
+     - Linhas: 20, 155-240, 316-378
+
+  3. **Logs de debug aprimorados:**
+     - Adicionados logs detalhados em cada etapa do preview (🔍, ✅, ⚠️, ❌)
+     - Mostra bucket detectado, path extraído, tentativa de signed URL vs blob download
+     - Facilita troubleshooting de problemas de storage
+
+- ✅ **Teste e Validação (MCP Playwright):**
+  - Navegado para página de processamento de aprovação
+  - Clicado em botão "Visualizar" do anexo PDF
+  - Console logs confirmam: bucket `docs-prod` detectado, signed URL criada com sucesso
+  - Preview modal abriu corretamente mostrando o PDF em iframe
+  - Screenshot capturado: `pdf-preview-working.png`
+  - **Resultado:** ✅ Funcionando perfeitamente!
+
+- ✅ **Resultado Final:**
+  - Preview de PDFs funciona corretamente com iframe
+  - Preview de imagens funciona corretamente com tag `<img>`
+  - Modal de preview elegante com fundo escuro e opção de fechar
+  - Loading state durante carregamento do arquivo
+  - Mensagens de erro claras quando arquivo não existe
+  - Arquivos: [TaskAttachmentViewer.tsx](src/components/TaskAttachmentViewer.tsx)
+  - Data: 03/10/2025 19:45
+
+- 📌 **Lição Aprendida:**
+  - **SEMPRE usar bucket `docs-prod` para anexos de tarefas** - todos os arquivos vão para Gestão de Documentos
+  - O `file_path` deve ser o `storage_key` retornado pelo upload (ex: `73a33e76-fea8-41bd-8467-c1f11ec4e2cb/8802bb13-d865-44ae-8826-1deceff95a6f.pdf`)
+  - O bucket `task-attachments` não é usado no fluxo atual do sistema
+
+#### Correção: Anexos Não Aparecem nas Tarefas de Aprovação
+- ✅ **Problema Identificado:**
+  - Ao criar tarefas de aprovação com anexos selecionados, os anexos não apareciam nem na tela de processamento nem na tela de visualização
+  - **Causa raiz:** Função `createTask` criava a tarefa mas nunca inseria registros na tabela `task_attachments`
+  - **Inconsistência adicional:** Banco usava coluna `file_url` mas código usava `file_path`
+
+- ✅ **Solução Implementada:**
+  1. **Migration do Schema:**
+     - Criada migration `20251003121512_rename_file_url_to_file_path_in_task_attachments.sql`
+     - Renomeado `file_url` → `file_path` na tabela `task_attachments`
+     - Aplicada via Supabase Management API ✅
+
+  2. **Modificação do createTask (useTasks.tsx):**
+     - Adicionado parâmetro `attachments?: Array<{ id: string; name: string }>` na interface `CreateTaskData`
+     - Implementada lógica de persistência de anexos após criação da tarefa:
+       - Busca metadados dos arquivos na tabela `chatter_files`
+       - Insere registros na `task_attachments` com `task_id` do task recém-criado
+       - Trata erros de forma graceful com logging e toasts
+     - Linhas: 107, 437-477
+
+  3. **Modificação do TaskEditorFullscreen.tsx:**
+     - Adicionado `attachments: selectedAttachments` ao objeto `taskData` passado para `createTask`
+     - Linha: 393
+
+  4. **Modificação do TaskViewFullscreen.tsx:**
+     - Adicionados imports: `TaskAttachmentViewer`, `supabase`, `FileText`
+     - Adicionado state: `attachments`, `loadingAttachments`
+     - Implementado useEffect para buscar anexos via query Supabase
+     - Adicionada seção de visualização de anexos usando `TaskAttachmentViewer`
+     - Linhas: 17-18, 31, 60-61, 94-130, 571-584
+
+- ✅ **Resultado:**
+  - Anexos agora são salvos corretamente no banco ao criar tarefas
+  - TaskApprovalProcessor já exibe anexos (funcionalidade existente mantida)
+  - TaskViewFullscreen agora também exibe anexos
+  - Visualizador profissional de anexos funciona em ambas as telas (preview de imagens/PDFs, download)
+
+- ✅ **Respostas às Perguntas do Usuário:**
+  - **Preview de arquivos Office (.doc, .docx, .xls, .xlsx)?**
+    - ⚠️ Não implementado (requer integração externa como Google Docs Viewer)
+    - Download funciona para todos os tipos
+  - **Melhores práticas:** ✅ Já implementadas (signed URLs com expiração, bucket separado, metadados rastreados)
+  - **Implementação profissional:** ✅ Já existe! `TaskAttachmentViewer` é elegante com UI baseada em cards, modal overlay, loading states
+
+- **Arquivos Modificados:**
+  - `supabase/migrations/20251003121512_rename_file_url_to_file_path_in_task_attachments.sql` (CRIADO)
+  - `src/hooks/useTasks.tsx` (linhas 107, 437-477)
+  - `src/pages/TaskEditorFullscreen.tsx` (linha 393)
+  - `src/pages/TaskViewFullscreen.tsx` (linhas 17-18, 31, 60-61, 94-130, 571-584)
+
+- Data: 03/10/2025 12:45
+
+#### Testes Automatizados com MCP Playwright - Validação Completa
+- ✅ **Teste: Ambas as Tarefas de Aprovação Validadas**
+  - **Objetivo:** Testar funcionalidade "Processar Aprovação" em ambas as tarefas para verificar correções de bugs
+  - **Metodologia:**
+    - Login automático via Playwright com credenciais de teste
+    - Navegação: Tasks → Lista tab
+    - Teste de ambas as tarefas disponíveis
+  - **Resultados:**
+    - ✅ **Tarefa 1 "Teste2" (Pendente):** SUCESSO - Página carrega sem erros
+    - ✅ **Tarefa 2 "Teste" (Em Andamento):** SUCESSO após correção
+  - **Bug Adicional Encontrado e Corrigido:**
+    - **Erro:** `TypeError: task.payload.approval_criteria.map is not a function`
+    - **Causa:** Código assumia que `approval_criteria` sempre seria array, mas poderia ser `undefined`, `null` ou outro tipo
+    - **Correção:** Adicionada verificação `Array.isArray()` antes de usar `.map()`
+    - **Linhas Modificadas:** 241, 253 em `TaskApprovalProcessor.tsx`
+  - **Screenshots Capturados:**
+    - `/tmp/playwright-output/task-approval-test2-success.png` (Tarefa 1)
+    - `/tmp/playwright-output/task-approval-teste-error.png` (Tarefa 2 - erro antes da correção)
+    - `/tmp/playwright-output/task-approval-teste-success.png` (Tarefa 2 - após correção)
+  - **Observações:**
+    - HTTP 400 error intermitente para Supabase (não afeta funcionalidade)
+    - HMR (Hot Module Replacement) funcionou perfeitamente durante correção
+  - Data: 03/10/2025 10:15
+
+#### Documentação de Testes Automatizados com MCP Playwright
+- ✅ **Nova Seção Adicionada ao CLAUDE.md:**
+  - Documentação completa sobre capacidades do MCP Playwright
+  - **Conteúdo Adicionado:**
+    - 📋 Quando usar Playwright (validar mudanças críticas, bugs de UI/UX, etc.)
+    - 🛠️ Ferramentas disponíveis (navegação, inspeção, interações, JavaScript, abas)
+    - 📝 Fluxo de teste recomendado com exemplo completo
+    - ✅ Boas práticas (capturar snapshots, verificar console, screenshots)
+    - ❌ O que nunca fazer em testes
+    - 🔧 Troubleshooting (elemento não encontrado, página não carrega, testes lentos)
+    - 🔄 Integração com workflow de desenvolvimento
+  - **Exemplos Práticos:**
+    - Teste completo de fluxo de aprovação (10 passos)
+    - Navegação, preenchimento de formulários, validação de resultados
+  - **Atualizado Índice:** Adicionada seção "Testes Automatizados com MCP Playwright"
+  - **Atualizado Regras:** Incluída regra para usar Playwright em mudanças críticas
+  - **Atualizado Checklist:** Adicionado item sobre testes automatizados
+  - Arquivo: `CLAUDE.md` (linhas 9-17, 322-552, 617-624, 639-644)
+  - Data: 03/10/2025 09:45
+
+#### Correção de Bugs na Página de Processamento de Aprovação
+- ✅ **Correção: Erro 'Cannot read properties of undefined (reading submitter)'**
+  - **Problema:** Query do hook `useTaskApproval` tentava fazer join incorreto de `form_responses.submitted_by` com `public.users`, mas a FK aponta para `auth.users`
+  - **Solução Implementada:**
+    - Removido join incorreto `submitter:submitted_by(...)` da query
+    - Adicionada query separada para buscar dados do submitter via `public.profiles`
+    - Dados combinados manualmente no hook para garantir consistência
+    - Adicionado optional chaining (`?.`) no componente para proteção adicional
+  - **Arquivos Modificados:**
+    - `src/hooks/useTaskApproval.tsx` (linhas 176-223)
+    - `src/pages/TaskApprovalProcessor.tsx` (linhas 301-327)
+  - **Resultado:** Página de processamento carrega sem erros, dados do submitter exibidos corretamente
+  - Data: 03/10/2025 09:25
+
+- ✅ **Correção: Erro 'column task_comments.content does not exist'**
+  - **Problema:** Código TypeScript usava `content` mas schema do banco tem coluna `comment`
+  - **Solução Implementada:**
+    - Atualizada interface `TaskComment` de `content` para `comment`
+    - Corrigida SELECT query para buscar coluna `comment`
+    - Corrigida INSERT query para inserir em coluna `comment`
+    - Atualizada renderização no componente para usar `comment.comment`
+  - **Arquivos Modificados:**
+    - `src/hooks/useTaskApproval.tsx` (linhas 85, 231, 312)
+    - `src/pages/TaskApprovalProcessor.tsx` (linha 459)
+  - **Resultado:** Comentários carregam e salvam corretamente sem erros
+  - Data: 03/10/2025 09:34
+
 ### 2025-10-02
 
 #### Reorganização Completa do Supabase e Documentação do Projeto

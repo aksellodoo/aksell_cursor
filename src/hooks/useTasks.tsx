@@ -47,6 +47,7 @@ export interface Task {
   series_id: string | null;
   occurrence_no: number | null;
   occurrence_start: string | null;
+  weblink: string | null;
   
   // Relacionamentos
   assigned_user?: {
@@ -103,6 +104,7 @@ export interface CreateTaskData {
   series_id?: string | null;
   occurrence_no?: number | null;
   occurrence_start?: string | null;
+  attachments?: Array<{ id: string; name: string }>;
 }
 
 export interface TaskFilter {
@@ -431,6 +433,48 @@ export const useTasks = () => {
       };
 
       console.log('✅ Task created successfully:', taskWithDefaults);
+
+      // Inserir anexos se houverem
+      if (taskData.attachments && taskData.attachments.length > 0) {
+        console.log('📎 Inserting attachments for task:', data.id);
+
+        try {
+          // Buscar metadados dos arquivos da tabela documents (Gestão de Documentos)
+          const fileIds = taskData.attachments.map(att => att.id);
+          const { data: filesData, error: filesError } = await supabase
+            .from('documents')
+            .select('id, name, file_url, storage_key, file_size, mime_type, created_by')
+            .in('id', fileIds);
+
+          if (filesError) {
+            console.error('⚠️ Error fetching file metadata:', filesError);
+            toast.error('Aviso: Erro ao buscar metadados dos anexos');
+          } else if (filesData && filesData.length > 0) {
+            // Inserir registros na tabela task_attachments
+            const attachmentsToInsert = filesData.map(file => ({
+              task_id: data.id,
+              file_name: file.name,
+              file_path: file.storage_key || file.file_url, // usar storage_key se disponível
+              file_size: file.file_size,
+              file_type: file.mime_type,
+              uploaded_by: file.created_by || user.id,
+            }));
+
+            const { error: attachError } = await supabase
+              .from('task_attachments')
+              .insert(attachmentsToInsert);
+
+            if (attachError) {
+              console.error('⚠️ Error inserting attachments:', attachError);
+              toast.error('Aviso: Anexos não foram salvos');
+            } else {
+              console.log(`✅ ${attachmentsToInsert.length} attachment(s) saved successfully`);
+            }
+          }
+        } catch (attachError) {
+          console.error('⚠️ Unexpected error saving attachments:', attachError);
+        }
+      }
 
       setTasks(prev => [taskWithDefaults, ...prev]);
       toast.success('Tarefa criada com sucesso!');

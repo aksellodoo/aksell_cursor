@@ -7,6 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import { Calendar, Clock, User, MoreHorizontal, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useNavigate } from 'react-router-dom';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,6 +37,8 @@ const statusConfig = {
 };
 
 export const TaskListView = ({ tasks, onTaskSelect, onStatusChange, onCreateNew }: TaskListViewProps) => {
+  const navigate = useNavigate();
+
   const isOverdue = (task: Task) => {
     if (!task.due_date || task.status === 'done') return false;
     return new Date(task.due_date) < new Date();
@@ -85,18 +88,18 @@ export const TaskListView = ({ tasks, onTaskSelect, onStatusChange, onCreateNew 
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => onTaskSelect?.(task)}>
+                      <DropdownMenuItem onClick={() => navigate(`/tasks/${task.id}/view`)}>
                         Ver Detalhes
                       </DropdownMenuItem>
                       {onStatusChange && (
                         <>
-                          <DropdownMenuItem 
+                          <DropdownMenuItem
                             onClick={() => onStatusChange(task.id, 'in_progress')}
                             disabled={task.status === 'in_progress'}
                           >
                             Marcar como Em Andamento
                           </DropdownMenuItem>
-                          <DropdownMenuItem 
+                          <DropdownMenuItem
                             onClick={() => onStatusChange(task.id, 'done')}
                             disabled={task.status === 'done'}
                           >

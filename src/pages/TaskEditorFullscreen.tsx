@@ -40,7 +40,10 @@ const taskFormSchema = z.object({
   estimated_hours: z.number().min(0).optional(),
   tags: z.array(z.string()).default([]),
   payload: z.record(z.any()).default({}),
-  weblink: z.string().url('URL inválida').optional().or(z.literal('')),
+  weblink: z.union([
+    z.string().url('URL inválida'),
+    z.literal(''),
+  ]).optional(),
 }).refine((data) => {
   if (data.expected_completion_at && data.deadline_at) {
     const expectedDate = new Date(data.expected_completion_at);
@@ -387,6 +390,7 @@ export const TaskEditorFullscreen: React.FC = () => {
             name: selectedTemplate.name,
             fixed_type: selectedTemplate.fixed_type,
           } : undefined,
+          attachments: selectedAttachments.length > 0 ? selectedAttachments : undefined,
         };
 
         await createTask(taskData as any);

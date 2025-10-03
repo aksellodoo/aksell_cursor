@@ -15,6 +15,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { TASK_TYPES, FixedTaskType } from '@/lib/taskTypesFixed';
+import { useNavigate } from 'react-router-dom';
 
 interface TasksTableProps {
   tasks: Task[];
@@ -49,6 +50,7 @@ const statusConfig = {
 
 export const TasksTable = ({ tasks, onTaskSelect, onStatusChange, onCreateNew, onProcessTask }: TasksTableProps) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [sortField, setSortField] = useState<SortField>('due_date');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
@@ -390,7 +392,7 @@ export const TasksTable = ({ tasks, onTaskSelect, onStatusChange, onCreateNew, o
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => onTaskSelect?.(task)}>
+                        <DropdownMenuItem onClick={() => navigate(`/tasks/${task.id}/view`)}>
                           Ver Detalhes
                         </DropdownMenuItem>
                         {onStatusChange && (

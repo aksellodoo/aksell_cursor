@@ -2,7 +2,7 @@
 
 > **Documento de referência principal para Claude Code trabalhar neste projeto**
 >
-> **Última atualização:** 02/10/2024
+> **Última atualização:** 03/10/2025
 
 ---
 
@@ -13,8 +13,9 @@
 4. [Workflow do Git](#-workflow-do-git)
 5. [Gestão de Tarefas e Progresso](#-gestão-de-tarefas-e-progresso)
 6. [Preview e Desenvolvimento](#-preview-e-desenvolvimento)
-7. [Comandos Úteis](#-comandos-úteis)
-8. [Regras Importantes](#-regras-importantes)
+7. [Testes Automatizados com MCP Playwright](#-testes-automatizados-com-mcp-playwright)
+8. [Comandos Úteis](#-comandos-úteis)
+9. [Regras Importantes](#-regras-importantes)
 
 ---
 
@@ -318,6 +319,282 @@ npm run preview
 
 ---
 
+## 🎭 Testes Automatizados com MCP Playwright
+
+### Capacidades de Teste Disponíveis
+
+**Claude Code tem acesso ao MCP Playwright** para testar o aplicativo de forma automatizada durante o desenvolvimento.
+
+### Quando Usar Playwright
+
+**⚠️ REGRA: Use Playwright para validar mudanças críticas**
+
+Use testes automatizados quando:
+- Implementar novas funcionalidades importantes
+- Corrigir bugs críticos que afetam UI/UX
+- Fazer refatorações que podem quebrar fluxos existentes
+- Validar formulários complexos
+- Testar fluxos de aprovação e autenticação
+- Verificar responsividade e acessibilidade
+
+### Ferramentas Disponíveis
+
+#### 1. Navegação
+```typescript
+// Navegar para página específica
+mcp__MCP_DOCKER__browser_navigate({ url: "http://localhost:8080/tasks" })
+
+// Voltar para página anterior
+mcp__MCP_DOCKER__browser_navigate_back()
+```
+
+#### 2. Inspeção de Página
+```typescript
+// Capturar snapshot de acessibilidade (melhor que screenshot para testes)
+mcp__MCP_DOCKER__browser_snapshot()
+
+// Tirar screenshot visual
+mcp__MCP_DOCKER__browser_take_screenshot({
+  filename: "task-approval-page.png",
+  fullPage: true
+})
+
+// Ver logs do console
+mcp__MCP_DOCKER__browser_console_messages()
+
+// Ver requisições de rede
+mcp__MCP_DOCKER__browser_network_requests()
+```
+
+#### 3. Interações
+```typescript
+// Clicar em elementos
+mcp__MCP_DOCKER__browser_click({
+  element: "Botão Processar Aprovação",
+  ref: "button[data-testid='process-approval']"
+})
+
+// Digitar texto
+mcp__MCP_DOCKER__browser_type({
+  element: "Campo de justificativa",
+  ref: "textarea#justification",
+  text: "Aprovado conforme critérios",
+  submit: false
+})
+
+// Preencher formulários completos
+mcp__MCP_DOCKER__browser_fill_form({
+  fields: [
+    { name: "Email", type: "textbox", ref: "input[name='email']", value: "test@example.com" },
+    { name: "Aceitar termos", type: "checkbox", ref: "input[type='checkbox']", value: "true" }
+  ]
+})
+
+// Selecionar opções em dropdown
+mcp__MCP_DOCKER__browser_select_option({
+  element: "Prioridade",
+  ref: "select#priority",
+  values: ["high"]
+})
+
+// Hover sobre elementos
+mcp__MCP_DOCKER__browser_hover({
+  element: "Menu de ações",
+  ref: "button.actions-menu"
+})
+```
+
+#### 4. Avaliação de JavaScript
+```typescript
+// Executar código JavaScript na página
+mcp__MCP_DOCKER__browser_evaluate({
+  function: "() => { return document.title; }"
+})
+
+// Executar código em elemento específico
+mcp__MCP_DOCKER__browser_evaluate({
+  element: "Tabela de tarefas",
+  ref: "table.tasks",
+  function: "(element) => { return element.rows.length; }"
+})
+```
+
+#### 5. Gerenciamento de Abas
+```typescript
+// Listar todas as abas abertas
+mcp__MCP_DOCKER__browser_tabs({ action: "list" })
+
+// Abrir nova aba
+mcp__MCP_DOCKER__browser_tabs({ action: "new" })
+
+// Mudar para outra aba
+mcp__MCP_DOCKER__browser_tabs({ action: "select", index: 1 })
+
+// Fechar aba
+mcp__MCP_DOCKER__browser_tabs({ action: "close", index: 0 })
+```
+
+### Fluxo de Teste Recomendado
+
+#### Exemplo: Testar Página de Processamento de Aprovação
+
+```typescript
+// 1. Navegar para a aplicação
+await browser_navigate({ url: "http://localhost:8080" })
+
+// 2. Capturar estado inicial
+await browser_snapshot()
+
+// 3. Fazer login (se necessário)
+await browser_fill_form({
+  fields: [
+    { name: "Email", type: "textbox", ref: "input[name='email']", value: "admin@aksell.com" },
+    { name: "Senha", type: "textbox", ref: "input[type='password']", value: "senha123" }
+  ]
+})
+await browser_click({ element: "Botão Login", ref: "button[type='submit']" })
+
+// 4. Navegar para lista de tarefas
+await browser_navigate({ url: "http://localhost:8080/tasks" })
+
+// 5. Clicar em "Processar Aprovação"
+await browser_click({ element: "Processar Aprovação", ref: "button:has-text('Processar Aprovação')" })
+
+// 6. Verificar se página carregou sem erros
+const snapshot = await browser_snapshot()
+const consoleErrors = await browser_console_messages()
+
+// 7. Preencher formulário de decisão
+await browser_type({
+  element: "Justificativa",
+  ref: "textarea#justification",
+  text: "Aprovado após análise dos critérios"
+})
+
+// 8. Clicar em Aprovar
+await browser_click({ element: "Botão Aprovar", ref: "button:has-text('Aprovar')" })
+
+// 9. Tirar screenshot do resultado
+await browser_take_screenshot({ filename: "approval-success.png" })
+
+// 10. Verificar mensagem de sucesso
+const finalSnapshot = await browser_snapshot()
+```
+
+### Boas Práticas
+
+#### ✅ SEMPRE Fazer
+
+1. **Capturar snapshot antes e depois** de interações importantes
+2. **Verificar console logs** para detectar erros JavaScript
+3. **Tirar screenshots** de estados críticos para documentação
+4. **Aguardar carregamento** antes de interagir com elementos
+5. **Validar mensagens de erro/sucesso** após ações
+6. **Verificar requisições de rede** para debugging de API
+
+#### ❌ NUNCA Fazer
+
+1. **Assumir que elemento existe** sem verificar snapshot
+2. **Interagir muito rápido** sem dar tempo para renderização
+3. **Ignorar erros do console** - sempre verificar logs
+4. **Testar em produção** - sempre usar localhost:8080
+5. **Esquecer de fechar browser** após testes
+
+### Quando Reportar Resultados
+
+**Sempre reportar ao usuário:**
+- Screenshots de estados importantes
+- Erros encontrados no console
+- Tempo de carregamento de páginas críticas
+- Comportamento inesperado da UI
+- Sugestões de melhorias de UX baseadas nos testes
+
+### Troubleshooting
+
+#### Elemento não encontrado
+```typescript
+// 1. Capturar snapshot para ver elementos disponíveis
+const snapshot = await browser_snapshot()
+
+// 2. Usar seletores mais específicos
+// ❌ Ruim: "button"
+// ✅ Bom: "button[data-testid='submit']" ou "button:has-text('Enviar')"
+```
+
+#### Página não carrega
+```typescript
+// 1. Verificar se preview está rodando
+curl http://localhost:8080
+
+// 2. Ver logs do console
+const logs = await browser_console_messages()
+
+// 3. Ver requisições de rede
+const requests = await browser_network_requests()
+```
+
+#### Testes lentos
+```typescript
+// 1. Usar snapshot ao invés de screenshot quando possível
+// 2. Evitar fullPage screenshots se não necessário
+// 3. Limitar número de verificações
+```
+
+### Integração com Workflow
+
+**Fluxo recomendado ao implementar features:**
+
+1. **Implementar código** → Escrever funcionalidade
+2. **Testar manualmente** → Verificar no browser
+3. **Testar com Playwright** → Validar fluxo automaticamente
+4. **Documentar em projectplan.md** → Registrar mudanças
+5. **Commitar (após perguntar)** → Salvar no git
+
+### Credenciais de Teste para Playwright
+
+**⚠️ IMPORTANTE: Usar apenas para testes automatizados via Playwright**
+
+Para testar funcionalidades que requerem autenticação:
+
+- **Email:** `junior@aksell.com.br`
+- **Senha:** `tmL!DNVPA843+h?UGpwphCCXhtjACd`
+- **2FA:** Clicar em "Cancelar" quando aparecer (sistema permite prosseguir)
+
+**Exemplo de login automatizado:**
+
+```typescript
+// Navegar para página de login
+await browser_navigate({ url: "http://localhost:8080/auth" })
+
+// Preencher credenciais
+await browser_type({
+  element: "Campo Email",
+  ref: "input[name='email']",
+  text: "junior@aksell.com.br"
+})
+
+await browser_type({
+  element: "Campo Senha",
+  ref: "input[type='password']",
+  text: "tmL!DNVPA843+h?UGpwphCCXhtjACd"
+})
+
+// Clicar em Entrar
+await browser_click({
+  element: "Botão Entrar",
+  ref: "button:has-text('Entrar')"
+})
+
+// Aguardar e clicar em Cancelar no 2FA (se aparecer)
+await browser_wait_for({ time: 2 })
+await browser_click({
+  element: "Cancelar 2FA",
+  ref: "button:has-text('Cancelar')"
+})
+```
+
+---
+
 ## 🛠️ Comandos Úteis
 
 ### NPM Scripts
@@ -386,7 +663,8 @@ npm run supabase:sql "SELECT COUNT(*) FROM tasks;"
 4. **Documentar migrations** em `supabase/migrations/README.md`
 5. **Usar método recomendado** (Management API) para SQL
 6. **Testar mudanças** antes de finalizar
-7. **Ler documentação** em `SUPABASE_WORKFLOW.md` quando necessário
+7. **Usar MCP Playwright** para validar mudanças críticas em fluxos importantes
+8. **Ler documentação** em `SUPABASE_WORKFLOW.md` quando necessário
 
 ### ❌ NUNCA Fazer
 
@@ -403,6 +681,7 @@ Ao completar uma tarefa, verificar:
 
 - [ ] Código funciona corretamente
 - [ ] Preview atualizado e testado (localhost:8080)
+- [ ] Testes automatizados com Playwright executados (para mudanças críticas)
 - [ ] Migration criada e aplicada (se mudou schema)
 - [ ] Migration documentada em `supabase/migrations/README.md`
 - [ ] `projectplan.md` atualizado com data/hora
