@@ -63,6 +63,23 @@ COMMENT ON TABLE public.tasks IS 'Tabela de tarefas do sistema - Workflow valida
 
 **Resultado**: ✨ Workflow validado com sucesso!
 
+### 20251002225458 - Fix form_responses foreign key
+**Status**: ✅ Aplicada em 02/10/2024 via Management API
+
+```sql
+-- Corrigir Foreign Key de form_responses.submitted_by para apontar para public.users ao invés de auth.users
+ALTER TABLE public.form_responses DROP CONSTRAINT IF EXISTS form_responses_submitted_by_fkey;
+ALTER TABLE public.form_responses ADD CONSTRAINT form_responses_submitted_by_fkey
+  FOREIGN KEY (submitted_by) REFERENCES public.users(id) ON DELETE CASCADE;
+CREATE INDEX IF NOT EXISTS idx_form_responses_submitted_by ON public.form_responses(submitted_by);
+```
+
+**Problema resolvido**:
+- FK antiga apontava para `auth.users` mas queries faziam JOIN com `public.users`
+- Erro: "Could not find a relationship between 'form_responses' and 'submitted_by'"
+- Solução: FK agora aponta corretamente para `public.users`
+- Bônus: Criado usuário "Jorge Machado Duarte Junior" em `public.users` para resolver órfãos
+
 ## Estrutura do Banco Remoto
 
 - **Projeto**: nahyrexnxhzutfeqxjte

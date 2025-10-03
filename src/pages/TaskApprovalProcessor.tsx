@@ -306,7 +306,7 @@ export const TaskApprovalProcessor = () => {
                     <div>
                       <p className="font-semibold text-lg">{formResponseData.form.title}</p>
                       <p className="text-sm text-muted-foreground">
-                        Preenchido por {formResponseData.response.user_name}
+                        Preenchido por {formResponseData.response.submitter?.name || 'Usuário desconhecido'}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {format(new Date(formResponseData.response.submitted_at), 'dd/MM/yyyy HH:mm', {

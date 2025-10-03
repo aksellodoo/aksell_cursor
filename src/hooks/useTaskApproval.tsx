@@ -70,9 +70,12 @@ export interface FormResponseData {
     response_data: any;
     submitted_at: string;
     submitted_by: string;
-    user_name: string;
-    user_email: string;
-    user_department: string;
+    submitter: {
+      id: string;
+      name: string;
+      email: string;
+      department: string;
+    };
   };
 }
 
@@ -179,9 +182,7 @@ export const useTaskApproval = (taskId: string) => {
             response_data,
             submitted_at,
             submitted_by,
-            user_name,
-            user_email,
-            user_department,
+            submitter:submitted_by(id, name, email, department),
             form:form_id(
               id,
               title,
